@@ -71,6 +71,9 @@ function wpick(pool,wf){
   for(let i=0;i<pool.length;i++){r-=ws[i];if(r<=0)return pool[i]}
   return pool[pool.length-1];
 }
+let POP={gamma:.5},FRESH=.7,DECL={};
+const pw=p=>Math.pow(p,POP.gamma);
+const fr=c=>Math.pow(FRESH,DECL[c.id]||0);  // cartas rechazadas varias veces en este draft salen menos
 let RAR={lim:.15,semi:.4,mulL:.3,mulS:.6};
 let RULES={},GR={},ENSURE=[],SEL=[],SEENA={};
 const KM={monster:'m',spell:'s',trap:'t'};
@@ -148,16 +151,16 @@ function newOffer(){
   const bal=k=>Math.min(6,Math.max(.1,Math.exp(.4*(T[k]*d/40-cur[k]))));
   // main: equilibrio hacia el objetivo, repetidas no-monstruo x0.45 por copia, reglas y perfiles
   // extra: las ya elegidas suben (x1.8 por copia)
-  const W=c=>x?1+.8*cnt(c):bal(c.k)*(c.k==='m'?1:Math.pow(.45,cnt(c)))*ruleMult(c,cur)*profMult(c,cur)*rm(c);
-  const W2=c=>bal(c.k)*(c.k==='m'?1:Math.pow(.45,cnt(c)));  // slots "opuestos": solo equilibrio y repetidas, sin reglas ni rareza
+  const W=c=>x?1+.8*cnt(c):bal(c.k)*(c.k==='m'?1:Math.pow(.45,cnt(c)))*ruleMult(c,cur)*profMult(c,cur)*rm(c)*fr(c);
+  const W2=c=>bal(c.k)*(c.k==='m'?1:Math.pow(.45,cnt(c)))*fr(c);  // slots "opuestos": solo equilibrio y repetidas, sin reglas ni rareza
   const anti=new Set();
   const take=(pool,wf,Wf=W,mark)=>{pool=pool.filter(c=>!out.includes(c));if(pool.length){const c=wpick(pool,k=>wf(k)*Wf(k));out.push(c);if(mark)anti.add(c)}};
   // slot 1: primero se sortea la "rareza" del staple (limitada / semi-limitada / libre) y luego la carta dentro de esa clase
   const st=av.filter(c=>c.p>=STAPLE),rr=Math.random();
   const order=rr<RAR.lim?[1,2,3]:rr<RAR.lim+RAR.semi?[2,3,1]:[3,2,1];
   const cl=order.map(m=>st.filter(c=>c.mx===m)).find(a=>a.length);
-  if(cl)take(cl,c=>c.p);
-  take(av,c=>(.03+6*c.p)*(1+syn(c)*.7));
+  if(cl)take(cl,c=>pw(c.p));
+  take(av,c=>(.03+6*pw(c.p))*(1+syn(c)*.7));
   // slots 3 y 4 (solo main): lo más opuesto a lo popular y a tu sinergia
   if(!x)for(let i=0;i<2;i++)take(av,c=>Math.pow(1-c.p,6)/(1+syn(c)),W2,true);
   while(out.length<(x?3:4)&&out.length<av.length)take(av,c=>.05+3*Math.sqrt(c.p));
@@ -165,6 +168,7 @@ function newOffer(){
   offer=out.sort(()=>Math.random()-.5).map(c=>({c,s:syn(c),a:anti.has(c)}));
 }
 function choose(c){
+  offer.forEach(o=>{if(o.c!==c)DECL[o.c.id]=(DECL[o.c.id]||0)+1});
   if(phase==='main'){deck.push(c);if(deck.length>=SIZE)phase='extra'}
   else{ext.push(c);if(ext.length>=XSIZE)phase='done'}
   if(phase!=='done'){newOffer();if(!offer.length)phase='done'}
@@ -197,11 +201,11 @@ function render(){
   $('dl').innerHTML=h;
   if(done)$('end').innerHTML='<h2>Tu mazo (.ydk)</h2><p class="sub">Copialo a un archivo .ydk para importarlo en simuladores.</p><textarea readonly>'+ydk()+'</textarea>';
 }
-function start(){SEENA={};deck=[];ext=[];phase='main';newOffer();render()}
+function start(){SEENA={};DECL={};deck=[];ext=[];phase='main';newOffer();render()}
 $('rs').onclick=start;
 $('sk').onclick=()=>{phase='done';render()};
 Promise.all([fetch('cards.json').then(r=>r.json()),fetch('rules.json').then(r=>r.json()).catch(()=>({}))]).then(([j,rl])=>{
-  GR=rl._groups||{};ENSURE=rl._ensure||[];Object.assign(RAR,rl._rarity||{});RULES=loadRules(rl);
+  GR=rl._groups||{};ENSURE=rl._ensure||[];Object.assign(RAR,rl._rarity||{});Object.assign(POP,rl._pop||{});if(rl._fresh!=null)FRESH=+rl._fresh;RULES=loadRules(rl);
   C=j.cards.filter(c=>!c.ex);X=j.cards.filter(c=>c.ex);
   start();
 }).catch(()=>{$('hd').textContent='No se pudo cargar cards.json. Corré build_pool.py y abrí la página con un servidor local (python -m http.server).'});

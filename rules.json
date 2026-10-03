@@ -16,7 +16,7 @@
       "Blue-Eyes Toon Dragon", "Toon Mermaid"
     ],
     "control": [
-      "Brain Control", "Soul Exchange", "Enemy Controller", "Change of Heart", "Snatch Steal"
+      "Soul Exchange", "Enemy Controller", "Change of Heart", "Snatch Steal"
     ],
     "discard": [
       "Card Destruction", "Graceful Charity", "Raigeki Break", "Phoenix Wing Wind Blast"
@@ -45,7 +45,10 @@
     ]
   },
 
-  "_rarity": { "lim": 0.15, "semi": 0.40, "mulL": 0.3, "mulS": 0.6 },
+  "_rarity": { "lim": 0.1, "semi": 0.30, "mulL": 0.2, "mulS": 0.5 },
+
+  "_pop": { "gamma": 0.5 },
+  "_fresh": 0.7,
 
   "_ensure": [
     { "group": "exodia" }
@@ -89,7 +92,7 @@
   },
 
   "@recruiters": {
-    "when": [ { "copies": ">=1", "x": 3 }, { "copies": ">=2", "x": 1.5 } ]
+    "when": [ { "copies": ">=1", "x": 2 }, { "copies": ">=2", "x": 1 } ]
   },
 
   "#race:Beast": { "when": [ { "has": ["Rescue Cat"], "x": 2 } ] },
@@ -99,9 +102,9 @@
 
   "@gravekeepers": { "when": [ { "has": ["@gravekeepers"], "x": 3 } ] },
 
-  "@zombie": { "when": [ { "has": ["@zombie"], "x": 3 } ] },
+  "@zombies": { "when": [ { "has": ["@zombies"], "x": 3 } ] },
 
   "@toon": { "when": [ { "has": ["@toon"], "x": 3 }, { "has": ["Toon World"], "x": 3 } ] },
 
-  "@agro": { "when":  [{"has":  ["Final Attack Orders"], "x": 1 }, {"has": ["@agro"], "x": 3 } ] }
+  "@agro": { "when":  [{"has":  ["Final Attack Orders"], "x": 2 }, {"has": ["@agro"], "x": 2 } ] }
 }
