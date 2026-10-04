@@ -1,0 +1,14 @@
+{
+  "tiers": {
+    "S": { "weights": { "1": 0.5, "2": 0.4, "3": 0.1 } },
+    "A": { "min": 4, "max": 6 },
+    "B": { "min": 6, "max": 10 }
+  },
+  "extraTiers": {
+    "S": { "weights": { "0": 0.5, "1": 0.5 } },
+    "A": { "min": 1, "max": 2 },
+    "B": { "min": 2, "max": 4 }
+  },
+  "balance": { "enabled": false, "monsters": 20, "spells": 10, "traps": 10, "strength": 0.4 },
+  "extraRepeatBoost": 0.8
+}

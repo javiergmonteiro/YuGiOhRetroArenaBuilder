@@ -1,93 +1,98 @@
 #!/usr/bin/env python3
-"""Genera cards.json + images/ para Arena GOAT.
+"""Arena GOAT v2 — genera cards.json + images_hd/ a partir de los .ydk de decks/.
 
-Uso:  pip install requests && python build_pool.py
-Opcional: poné mazos .ydk del formato en la carpeta decks/ para calcular
-popularidad (p) y sinergias reales (co). Sin mazos, todo queda con peso parejo.
+Uso:   pip install requests
+       python build_pool.py          # pool = cartas que aparecen en algún .ydk
+       python build_pool.py --all    # pool aleatorio = TODAS las cartas legales de GOAT (vainillas incluidas)
+
+Cómo se asigna el tier de cada carta (según el NOMBRE del archivo .ydk donde aparece):
+    tier s.ydk  -> S        tier a.ydk -> A        tier b.ydk -> B
+    cualquier otro .ydk -> R (pool aleatorio)
+Si una carta está en varios archivos gana el tier más alto (S > A > B > R).
+Se aceptan variantes del nombre: "Tier_S.ydk", "tier-s.ydk", "TIER S.ydk"...
 """
-import collections, glob, itertools, json, os, time, requests
+import collections, glob, json, os, re, sys, time, requests
 
+ALL = "--all" in sys.argv
 API = "https://db.ygoprodeck.com/api/v7/cardinfo.php?format=goat"
-LIM = {"Forbidden": 0, "Limited": 1, "Semi-Limited": 2}
+LIM = {"Forbidden": 0, "Limited": 1, "Semi-Limited": 2}   # copias máximas según la banlist GOAT
+RANK = {"S": 0, "A": 1, "B": 2, "R": 3}
+TIER_FILES = {"tiers": "S", "tiera": "A", "tierb": "B"}
 os.makedirs("images_hd", exist_ok=True)
 os.makedirs("decks", exist_ok=True)
 
 data = requests.get(API, timeout=60).json()["data"]
-cards, alias, urls = {}, {}, {}
+cards, alias, urls, names, forbidden = {}, {}, {}, {}, set()
 for c in data:
+    names[c["id"]] = c["name"]
+    for x in c["card_images"]:
+        alias[x["id"]] = c["id"]                      # ids de arte alternativo -> id principal
     mx = LIM.get(c.get("banlist_info", {}).get("ban_goat"), 3)
-    if mx == 0:  # prohibida en GOAT
+    if mx == 0:                                       # prohibida en GOAT: no entra al juego
+        forbidden.add(c["id"])
         continue
     t = c["type"]
     im = c["card_images"][0]
     cards[c["id"]] = dict(
         id=c["id"], n=c["name"], k="m" if "Monster" in t else "s" if "Spell" in t else "t",
-        ty=t, lv=c.get("level"), a=c.get("atk"), d=c.get("def"), mx=mx,
-        ex="Fusion" in t, img=im["id"], desc=c.get("desc", ""), r=c.get("race"), at=c.get("attribute"), p=0, co={})
-    urls[c["id"]] = im["image_url"]  # resolución completa (~421x614)
-    for x in c["card_images"]:
-        alias[x["id"]] = c["id"]
+        ty=t, lv=c.get("level"), a=c.get("atk"), d=c.get("def"), mx=mx, ex="Fusion" in t,
+        img=im["id"], desc=c.get("desc", ""), r=c.get("race"), at=c.get("attribute"), t="")
+    urls[c["id"]] = im["image_url"]                   # resolución completa (~421x614)
 
-# --- popularidad y co-ocurrencia a partir de los .ydk ---
-N, n, co = 0, collections.Counter(), collections.defaultdict(collections.Counter)
-prof = collections.defaultdict(lambda: [0.0, 0.0, 0.0])  # suma de composición (m, s, t) de los mazos donde aparece
-for f in glob.glob("decks/*.ydk"):
-    ids, sec, mainl = set(), "", []
+
+def file_tier(path):
+    key = re.sub(r"[^a-z]", "", os.path.splitext(os.path.basename(path))[0].lower())
+    return TIER_FILES.get(key, "R")
+
+
+files = collections.Counter()
+dropped = collections.defaultdict(set)
+for f in sorted(glob.glob("decks/*.ydk")):
+    tier = file_tier(f)
+    files[tier] += 1
+    sec = ""
     for l in open(f, encoding="utf-8", errors="ignore"):
         l = l.strip()
         if l.startswith(("#", "!")):
             sec = l
             continue
-        if l.isdigit() and sec != "!side" and alias.get(int(l)) in cards:
-            ids.add(alias[int(l)])
-            if sec == "#main":
-                mainl.append(alias[int(l)])
-    if not ids:
-        continue
-    N += 1
-    n.update(ids)
-    if mainl:
-        v = [sum(cards[i]["k"] == k for i in mainl) / len(mainl) for k in "mst"]
-        for i in ids:
-            prof[i] = [a + b for a, b in zip(prof[i], v)]
-    main = [i for i in ids if not cards[i]["ex"]]
-    for a, b in itertools.permutations(main, 2):
-        co[a][b] += 1
-    for a in ids:  # fusión -> cartas del main con las que suele jugarse
-        if cards[a]["ex"]:
-            for b in main:
-                co[a][b] += 1
+        if not l.isdigit() or sec == "!side":         # el side deck se ignora
+            continue
+        i = alias.get(int(l))
+        if i in forbidden:
+            dropped[tier].add(names[i])
+            continue
+        if i in cards and (not cards[i]["t"] or RANK[tier] < RANK[cards[i]["t"]]):
+            cards[i]["t"] = tier                      # gana el tier más alto
 
-if not N:
-    raise SystemExit("No hay mazos .ydk en decks/. Ponelos ahí y volvé a correr el script.")
+if ALL:                                               # pool aleatorio abierto: todo lo demás es tier R
+    for c in cards.values():
+        if not c["t"]:
+            c["t"] = "R"
 
-# El pool = solo las cartas que aparecen en algún .ydk (main o extra)
-cards = {i: c for i, c in cards.items() if n[i] > 0}
+pool = {i: c for i, c in cards.items() if c["t"]}
+if not pool:
+    raise SystemExit("No hay cartas: poné archivos .ydk en decks/ (tier s.ydk, tier a.ydk, tier b.ydk y otros) o usá --all.")
 
-for i, c in cards.items():
-    if N:
-        c["p"] = round(n[i] / N, 3)
-    c["pn"] = n[i]
-    if n[i] >= 3:  # perfil: fracción media de monstruos/magias/trampas de los mazos que la juegan
-        c["prof"] = [round(x / n[i], 3) for x in prof[i]]
-    # lift = cuánto más seguido aparecen juntas que por azar
-    c["co"] = {b: round(k * N / (n[i] * n[b]), 2) for b, k in co[i].most_common(40) if k >= 2}
-
-# Extra Deck fijo: fusiones más usadas (o las de mayor nivel si no hay mazos)
-fx = sorted((c for c in cards.values() if c["ex"]), key=lambda c: (-c["p"], -(c["lv"] or 0)))
-extra = [c["id"] for c in fx[:15]]
+per = collections.Counter((c["t"], c["ex"]) for c in pool.values())
+for t in "SABR":
+    print(f"Tier {t}: {per[(t, False)]} cartas de main + {per[(t, True)]} del Extra  ({files[t]} archivo/s)")
+for t in "SAB":
+    if not files[t]:
+        print(f"AVISO: no existe 'tier {t.lower()}.ydk': no habrá cartas de tier {t}.")
+for t, ns in dropped.items():
+    print(f"AVISO: prohibidas en GOAT, ignoradas (tier {t}): {', '.join(sorted(ns))}")
 
 with open("cards.json", "w", encoding="utf-8") as fh:
-    json.dump({"cards": list(cards.values()), "extra": extra, "decks": N}, fh, ensure_ascii=False)
-print(f"{len(cards)} cartas en el pool, {N} mazos analizados")
+    json.dump({"cards": list(pool.values())}, fh, ensure_ascii=False)
 
-# --- imágenes (YGOPRODeck pide descargarlas y hostearlas, no hotlinkear) ---
-for i, c in cards.items():
-    path = f"images_hd/{c['img']}.jpg"
+# Imágenes: YGOPRODeck pide descargarlas y hostearlas (no enlazarlas). Las ya descargadas se saltean.
+for i in pool:
+    path = f"images_hd/{pool[i]['img']}.jpg"
     if os.path.exists(path):
         continue
     r = requests.get(urls[i], timeout=30)
     if r.ok:
         open(path, "wb").write(r.content)
-    time.sleep(0.1)  # el límite es 20 req/s
+    time.sleep(0.1)                                   # límite de la API: 20 req/s
 print("listo")

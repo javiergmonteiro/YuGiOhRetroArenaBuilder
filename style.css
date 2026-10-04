@@ -84,3 +84,14 @@ h1 { margin: 0; font-size: 1.5rem; }
 /* ---------- 6. BOTONES Y TEXTAREA FINAL ---------- */
 button.b { background: var(--ac); color: var(--bg); border: 0; border-radius: 6px; padding: 8px 14px; font: inherit; cursor: pointer; margin-right: 6px; margin-bottom: 6px; }
 textarea { width: 100%; height: 200px; background: var(--bg); color: var(--fg); border: 1px solid var(--bd); border-radius: 6px; font-family: monospace; padding: 8px; }
+
+/* ---------- 7. TIERS (v2) ----------
+ * S = dorado con brillo (como una legendaria), A = violeta, B = azul. Las cartas del pool aleatorio no llevan marca.
+ * .tl es la mini-etiqueta de tier que aparece en la lista lateral del mazo. */
+.card.tS { border-color: #d4a017; box-shadow: 0 0 14px rgba(212,160,23,.55); }
+.card.tA { border-color: #9b59b6; box-shadow: 0 0 10px rgba(155,89,182,.45); }
+.card.tB { border-color: #3b82f6; }
+.card.tS:hover { border-color: #d4a017; } .card.tA:hover { border-color: #9b59b6; } .card.tB:hover { border-color: #3b82f6; }
+.tier { font-weight: bold; }
+.tS .tier, .tl.tS { color: #d4a017; } .tA .tier, .tl.tA { color: #9b59b6; } .tB .tier, .tl.tB { color: #3b82f6; }
+.tl { font-size: .7rem; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; margin-right: 6px; }
