@@ -1,0 +1,86 @@
+/* =====================================================================
+ * Arena GOAT — estilos
+ * Organización: 1) tema (colores)  2) base  3) layout  4) ofertas/cartas
+ *               5) panel del mazo  6) botones y textarea
+ * ===================================================================== */
+
+/* ---------- 1. TEMA: variables de color ----------
+ * --bg fondo · --fg texto · --mut texto secundario · --pn paneles/tarjetas
+ * --bd bordes · --ac color de acento (barra de progreso, hover, etiquetas)
+ * Por defecto sigue el modo claro/oscuro del sistema; también se puede forzar
+ * poniendo data-theme="light" o data-theme="dark" en <html>.
+ * Las env(safe-area-inset-*) evitan que el contenido quede bajo la barra del
+ * celular (notch). */
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg: #f4f1ea; --fg: #1d1b18; --mut: #6b665d;
+  --pn: #fff;    --bd: #d9d3c7; --ac: #8a5a00;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14120f; --fg: #efe9dc; --mut: #9b9384;
+    --pn: #1f1c17; --bd: #37322a; --ac: #e8b04a;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14120f; --fg: #efe9dc; --mut: #9b9384;
+  --pn: #1f1c17; --bd: #37322a; --ac: #e8b04a;
+}
+
+/* ---------- 2. BASE ---------- */
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: Georgia, serif; }
+h1 { margin: 0; font-size: 1.5rem; }
+
+/* Cabecera: título a la izquierda, selector de idioma EN | ES (discreto) a la derecha */
+.top { display: flex; justify-content: space-between; align-items: center; }
+.lang { font-size: .8rem; color: var(--bd); }
+.lang button { background: none; border: 0; color: var(--mut); font: inherit; cursor: pointer; padding: 2px 6px; }
+.lang button.on { color: var(--ac); font-weight: bold; text-decoration: underline; }
+.sub { color: var(--mut); font-size: .9rem; margin: 2px 0 12px; }   /* texto auxiliar */
+
+/* ---------- 3. LAYOUT ---------- */
+.w { max-width: 1300px; margin: 0 auto; padding: 16px; }            /* contenedor central */
+
+/* Barra de progreso (main + extra). El ancho lo fija app.js en render() */
+.bar { height: 8px; background: var(--bd); border-radius: 4px; overflow: hidden; margin: 6px 0 16px; }
+.bar i { display: block; height: 100%; background: var(--ac); transition: width .3s; }
+
+/* Grilla principal: columna izquierda (ofertas) + columna derecha (mazo, 340px) */
+.g { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
+@media (max-width: 760px) { .g { grid-template-columns: 1fr; } }   /* celular: una sola columna */
+
+/* ---------- 4. OFERTAS Y CARTAS ---------- */
+/* 4 cartas por pick en el main (3 en el Extra). En pantallas angostas pasan a 2x2 */
+.offers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 1050px) { .offers { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px)  { .offers { gap: 6px; } }
+
+/* Cada oferta es un <button class="card"> */
+.card {
+  background: var(--pn); border: 2px solid var(--bd); border-radius: 8px; padding: 8px;
+  cursor: pointer; font: inherit; color: inherit; text-align: center; transition: transform .12s;
+}
+.card:hover { transform: translateY(-4px); border-color: var(--ac); }
+.card img { width: 100%; aspect-ratio: 59/86; object-fit: cover; border-radius: 4px; background: var(--bd); }
+.card b { display: block; font-size: .85rem; margin-top: 6px; }     /* nombre de la carta */
+
+/* Etiquetas: Staple / Limitada / Semi-limitada / ★ sinergia / ✦ fuera de lo común */
+.tag { font-size: .72rem; color: var(--ac); }
+
+/* Texto de la carta bajo la imagen. Sin altura máxima: se muestra completo.
+ * white-space:pre-line respeta los saltos de línea del texto original. */
+.d { display: block; font-size: .76rem; color: var(--mut); text-align: left; margin-top: 4px; line-height: 1.35; white-space: pre-line; }
+
+/* ---------- 5. PANEL DEL MAZO (columna derecha) ---------- */
+.pn { background: var(--pn); border: 1px solid var(--bd); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+.pn h2 { font-size: 1rem; margin: 0 0 8px; }
+.dl { font-size: .95rem; }                                          /* lista de cartas elegidas (sin scroll interno) */
+.dl div { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dotted var(--bd); }
+.dl .h { font-weight: bold; border: 0; color: var(--mut); margin-top: 6px; }   /* encabezado de sección (Monstruos, Magias...) */
+
+/* ---------- 6. BOTONES Y TEXTAREA FINAL ---------- */
+button.b { background: var(--ac); color: var(--bg); border: 0; border-radius: 6px; padding: 8px 14px; font: inherit; cursor: pointer; margin-right: 6px; margin-bottom: 6px; }
+textarea { width: 100%; height: 200px; background: var(--bg); color: var(--fg); border: 1px solid var(--bd); border-radius: 6px; font-family: monospace; padding: 8px; }

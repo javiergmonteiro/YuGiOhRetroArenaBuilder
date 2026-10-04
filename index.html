@@ -1,214 +1,47 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- viewport-fit=cover + safe-area insets (see style.css) for phones with a notch -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Arena GOAT</title>
-<style>
-:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f4f1ea;--fg:#1d1b18;--mut:#6b665d;--pn:#fff;--bd:#d9d3c7;--ac:#8a5a00}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14120f;--fg:#efe9dc;--mut:#9b9384;--pn:#1f1c17;--bd:#37322a;--ac:#e8b04a}}
-:root[data-theme="dark"]{--bg:#14120f;--fg:#efe9dc;--mut:#9b9384;--pn:#1f1c17;--bd:#37322a;--ac:#e8b04a}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:Georgia,serif}
-.w{max-width:1300px;margin:0 auto;padding:16px}
-h1{margin:0;font-size:1.5rem}
-.sub{color:var(--mut);font-size:.9rem;margin:2px 0 12px}
-.bar{height:8px;background:var(--bd);border-radius:4px;overflow:hidden;margin:6px 0 16px}
-.bar i{display:block;height:100%;background:var(--ac);transition:width .3s}
-.g{display:grid;grid-template-columns:1fr 340px;gap:16px}
-@media(max-width:760px){.g{grid-template-columns:1fr}}
-.offers{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start}
-@media(max-width:1050px){.offers{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:520px){.offers{gap:6px}}
-.card{background:var(--pn);border:2px solid var(--bd);border-radius:8px;padding:8px;cursor:pointer;font:inherit;color:inherit;text-align:center;transition:transform .12s}
-.card:hover{transform:translateY(-4px);border-color:var(--ac)}
-.card img{width:100%;aspect-ratio:59/86;object-fit:cover;border-radius:4px;background:var(--bd)}
-.card b{display:block;font-size:.85rem;margin-top:6px}
-.tag{font-size:.72rem;color:var(--ac)}
-.d{display:block;font-size:.76rem;color:var(--mut);text-align:left;margin-top:4px;line-height:1.35;white-space:pre-line}
-.pn{background:var(--pn);border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:12px}
-.pn h2{font-size:1rem;margin:0 0 8px}
-.dl{font-size:.95rem}
-.dl div{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dotted var(--bd)}
-.dl .h{font-weight:bold;border:0;color:var(--mut);margin-top:6px}
-button.b{background:var(--ac);color:var(--bg);border:0;border-radius:6px;padding:8px 14px;font:inherit;cursor:pointer;margin-right:6px;margin-bottom:6px}
-textarea{width:100%;height:200px;background:var(--bg);color:var(--fg);border:1px solid var(--bd);border-radius:6px;font-family:monospace;padding:8px}
-</style>
+<title>GOAT Arena</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="w">
-<h1>Arena GOAT</h1>
-<div class="sub">Elegí 1 de 3 cartas: 40 para el main y hasta 15 para el Extra Deck.</div>
-<div class="bar"><i id="bar"></i></div>
-<div class="g">
-<div>
-<div id="hd" style="margin-bottom:8px"></div>
-<div class="offers" id="off"></div>
-<div id="end" class="pn" style="display:none"></div>
+  <!-- Header: title + language switch. Elements with data-t="key" get their text from app.js (TT dictionary).
+       The page always starts in English; EN | ES switches without reloading, so the draft in progress is kept. -->
+  <div class="top">
+    <h1 data-t="title">GOAT Arena</h1>
+    <div class="lang"><button data-lang="en" class="on">EN</button>|<button data-lang="es">ES</button></div>
+  </div>
+  <div class="sub" data-t="subtitle">Pick 1 of 4 cards for the main deck (40) and 1 of 3 for the Extra Deck (up to 15).</div>
+
+  <!-- Progress bar: app.js sets its width (#bar) -->
+  <div class="bar"><i id="bar"></i></div>
+
+  <div class="g">
+    <!-- Left column -->
+    <div>
+      <div id="hd" style="margin-bottom:8px"></div>   <!-- header: "Pick 12 of 40 · Monsters..." or error messages -->
+      <div class="offers" id="off"></div>             <!-- the offered cards are drawn here -->
+      <div id="end" class="pn" style="display:none"></div>  <!-- final screen with the .ydk -->
+    </div>
+
+    <!-- Right column: chosen deck -->
+    <div class="pn">
+      <h2>Main <span id="n">0</span>/40 · Extra <span id="ne">0</span>/15</h2>
+      <div class="dl" id="dl"></div>                  <!-- deck list grouped by card type -->
+      <div style="margin-top:10px">
+        <button class="b" id="sk" style="display:none" data-t="finishExtra">Finish Extra</button>  <!-- Extra Deck phase only -->
+        <button class="b" id="rs" data-t="restart">Restart</button>
+      </div>
+    </div>
+  </div>
 </div>
-<div class="pn"><h2>Main <span id="n">0</span>/40 · Extra <span id="ne">0</span>/15</h2><div class="dl" id="dl"></div>
-<div style="margin-top:10px"><button class="b" id="sk" style="display:none">Terminar Extra</button><button class="b" id="rs">Reiniciar</button></div></div>
-</div>
-</div>
-<script>
-const SIZE=40,XSIZE=15,STAPLE=.3,MAXTYPE=30,KN={m:'Monstruos',s:'Magias',t:'Trampas'};
-let C=[],X=[],deck=[],ext=[],offer=[],phase='main';
-const $=id=>document.getElementById(id);
-const img=c=>'<img loading="lazy" src="images_hd/'+c.img+'.jpg" alt="'+c.n.replace(/"/g,'')+'" onerror="this.style.visibility=\'hidden\'">';
-const cnt=c=>(c.ex?ext:deck).filter(x=>x===c).length;
-const nm=()=>deck.filter(c=>c.k==='m').length;
-function syn(c){
-  let s=0;
-  for(const p of new Set(deck)){
-    const l=Math.max((c.co&&c.co[p.id])||0,(p.co&&p.co[c.id])||0);
-    if(l>1)s+=Math.min(l,5)-1;
-  }
-  return Math.min(s,8);
-}
-function wpick(pool,wf){
-  const ws=pool.map(wf),tot=ws.reduce((a,b)=>a+b,0);
-  let r=Math.random()*tot;
-  for(let i=0;i<pool.length;i++){r-=ws[i];if(r<=0)return pool[i]}
-  return pool[pool.length-1];
-}
-let POP={gamma:.5},FRESH=.7,DECL={};
-const pw=p=>Math.pow(p,POP.gamma);
-const fr=c=>Math.pow(FRESH,DECL[c.id]||0);  // cartas rechazadas varias veces en este draft salen menos
-let RAR={lim:.15,semi:.4,mulL:.3,mulS:.6};
-let RULES={},GR={},ENSURE=[],SEL=[],SEENA={};
-const KM={monster:'m',spell:'s',trap:'t'};
-const cmp=(v,s)=>{const m=/^(<=|>=|==|<|>)\s*(-?\d+)/.exec(s);if(!m)return false;const n=+m[2];return m[1]==='=='?v===n:m[1]==='<='?v<=n:m[1]==='>='?v>=n:m[1]==='<'?v<n:v>n};
-function parseSel(s){
-  const ts=s.split(',').map(t=>{
-    let m;
-    if(m=/^race:(.+)$/.exec(t))return c=>c.r===m[1];
-    if(m=/^attr:(.+)$/.exec(t))return c=>c.at===m[1];
-    if(m=/^type:(.+)$/.exec(t))return c=>(c.ty||'').includes(m[1]);
-    if(m=/^lv(.+)$/.exec(t))return c=>c.k==='m'&&cmp(+c.lv,m[1]);
-    return ()=>false;
-  });
-  return c=>ts.every(f=>f(c));
-}
-function loadRules(raw){
-  const G=raw._groups||{},out={};SEL=[];
-  const ex=l=>(l||[]).flatMap(n=>n[0]==='@'?(G[n.slice(1)]||[]):[n]);
-  for(const [k,r] of Object.entries(raw)){
-    if(k[0]==='_')continue;
-    const rule={shift:r.shift||{},when:(r.when||[]).map(w=>({...w,has:w.has&&ex(w.has)}))};
-    if(k[0]==='#'){SEL.push({test:parseSel(k.slice(1)),rule});continue}
-    for(const nm of ex([k]))(out[nm]=out[nm]||[]).push(rule);
-  }
-  return out;
-}
-const ruleList=c=>(RULES[c.n]||[]).concat(SEL.filter(s=>s.test(c)).map(s=>s.rule));
-const kc=()=>{const o={m:0,s:0,t:0};deck.forEach(c=>o[c.k]++);return o};
-// objetivo de composición (sobre 40): base 20/10/10 + desplazamientos de las cartas elegidas
-function target(){
-  const T={m:20,s:10,t:10};
-  for(const c of new Set(deck))for(const r of ruleList(c))for(const [k,v] of Object.entries(r.shift))T[KM[k]]+=v;
-  T.m=Math.max(T.m,6);T.s=Math.max(T.s,0);T.t=Math.max(T.t,0);
-  return T;
-}
-// reglas manuales: multiplicadores según composición proyectada a 40 cartas o cartas ya elegidas
-function ruleMult(c,cur){
-  const d=deck.length,names=new Set(deck.map(p=>p.n));let x=1;
-  for(const r of ruleList(c))for(const w of r.when){
-    let ok=true;
-    for(const k of ['monster','spell','trap'])if(w[k])ok=ok&&d>=12&&cmp(cur[KM[k]]/d*40,w[k]);
-    if(w.has)ok=ok&&w.has.some(n=>names.has(n));
-    if(w.copies)ok=ok&&cmp(cnt(c),w.copies);
-    if(ok)x*=w.x;
-  }
-  return x;
-}
-// perfil aprendido: favorece cartas que se juegan en mazos con una composición parecida a la tuya
-function profMult(c,cur){
-  const d=deck.length;
-  if(!c.prof||c.pn<3||!d)return 1;
-  const dist=['m','s','t'].reduce((s,k,i)=>s+(cur[k]/d-c.prof[i])**2,0);
-  return 1+Math.min(1,d/20)*.6*(2*Math.exp(-dist/.03)-1);
-}
-// garantía: si ya elegiste una carta de un grupo (ej. Exodia), las demás deben ofrecerse al menos una vez
-function ensure(out,d){
-  const r=SIZE-d,act=[];
-  for(const e of ENSURE){
-    const mem=C.filter(c=>(GR[e.group]||[]).includes(c.n));
-    if(mem.some(c=>deck.includes(c)))act.push({mem,seen:SEENA[e.group]=SEENA[e.group]||new Set()});
-  }
-  const pend=act.flatMap(a=>a.mem.filter(c=>!deck.includes(c)&&!a.seen.has(c.id)&&cnt(c)<c.mx));
-  if(pend.length&&Math.random()<(pend.length>=r?1:Math.min(.5,1.5*pend.length/r))){
-    const f=pend[Math.floor(Math.random()*pend.length)];
-    if(!out.includes(f)){if(out.length>=4)out[out.length-1]=f;else out.push(f)}
-  }
-  act.forEach(a=>out.forEach(c=>a.seen.add(c.id)));
-}
-// rareza: solo afecta a staples (p>=STAPLE) con límite de la banlist; las limitadas poco usadas no se tocan
-const rm=c=>c.p>=STAPLE?(c.mx===1?RAR.mulL:c.mx===2?RAR.mulS:1):1;
-function newOffer(){
-  const x=phase==='extra',d=deck.length,cur=kc(),T=target(),out=[];
-  let av=(x?X:C).filter(c=>cnt(c)<c.mx);
-  if(!x){const f=av.filter(c=>cur[c.k]<T[c.k]+10);if(f.length>=3)av=f}
-  const bal=k=>Math.min(6,Math.max(.1,Math.exp(.4*(T[k]*d/40-cur[k]))));
-  // main: equilibrio hacia el objetivo, repetidas no-monstruo x0.45 por copia, reglas y perfiles
-  // extra: las ya elegidas suben (x1.8 por copia)
-  const W=c=>x?1+.8*cnt(c):bal(c.k)*(c.k==='m'?1:Math.pow(.45,cnt(c)))*ruleMult(c,cur)*profMult(c,cur)*rm(c)*fr(c);
-  const W2=c=>bal(c.k)*(c.k==='m'?1:Math.pow(.45,cnt(c)))*fr(c);  // slots "opuestos": solo equilibrio y repetidas, sin reglas ni rareza
-  const anti=new Set();
-  const take=(pool,wf,Wf=W,mark)=>{pool=pool.filter(c=>!out.includes(c));if(pool.length){const c=wpick(pool,k=>wf(k)*Wf(k));out.push(c);if(mark)anti.add(c)}};
-  // slot 1: primero se sortea la "rareza" del staple (limitada / semi-limitada / libre) y luego la carta dentro de esa clase
-  const st=av.filter(c=>c.p>=STAPLE),rr=Math.random();
-  const order=rr<RAR.lim?[1,2,3]:rr<RAR.lim+RAR.semi?[2,3,1]:[3,2,1];
-  const cl=order.map(m=>st.filter(c=>c.mx===m)).find(a=>a.length);
-  if(cl)take(cl,c=>pw(c.p));
-  take(av,c=>(.03+6*pw(c.p))*(1+syn(c)*.7));
-  // slots 3 y 4 (solo main): lo más opuesto a lo popular y a tu sinergia
-  if(!x)for(let i=0;i<2;i++)take(av,c=>Math.pow(1-c.p,6)/(1+syn(c)),W2,true);
-  while(out.length<(x?3:4)&&out.length<av.length)take(av,c=>.05+3*Math.sqrt(c.p));
-  if(!x)ensure(out,d);
-  offer=out.sort(()=>Math.random()-.5).map(c=>({c,s:syn(c),a:anti.has(c)}));
-}
-function choose(c){
-  offer.forEach(o=>{if(o.c!==c)DECL[o.c.id]=(DECL[o.c.id]||0)+1});
-  if(phase==='main'){deck.push(c);if(deck.length>=SIZE)phase='extra'}
-  else{ext.push(c);if(ext.length>=XSIZE)phase='done'}
-  if(phase!=='done'){newOffer();if(!offer.length)phase='done'}
-  render();
-}
-function ydk(){
-  const id=a=>a.map(c=>c.id).sort((p,q)=>p-q).join('\n');
-  return '#created by Arena GOAT\n#main\n'+id(deck)+'\n#extra\n'+id(ext)+'\n!side\n';
-}
-function list(arr,title){
-  let h='<div class="h">'+title+'</div>';
-  [...new Set(arr)].sort((a,b)=>a.n.localeCompare(b.n)).forEach(c=>h+='<div><span>'+c.n+'</span><span>×'+arr.filter(x=>x===c).length+'</span></div>');
-  return h;
-}
-function render(){
-  const d=deck.length,e=ext.length,done=phase==='done',m=nm();
-  $('bar').style.width=((d+e)/(SIZE+XSIZE)*100)+'%';$('n').textContent=d;$('ne').textContent=e;
-  $('off').style.display=done?'none':'';$('end').style.display=done?'':'none';$('sk').style.display=phase==='extra'?'':'none';
-  $('hd').textContent=done?'¡Mazo completo!':phase==='main'?'Pick '+(d+1)+' de '+SIZE+' · Monstruos '+m+' · Magias '+deck.filter(c=>c.k==='s').length+' · Trampas '+deck.filter(c=>c.k==='t').length:'Extra Deck: pick '+(e+1)+' de '+XSIZE;
-  $('off').innerHTML='';
-  if(!done)offer.forEach(o=>{
-    const c=o.c,b=document.createElement('button');
-    b.className='card';
-    b.innerHTML=img(c)+'<b>'+c.n+'</b><span class="tag">'+(c.p>=STAPLE?'Staple ':'')+(c.mx===1?'Limitada ':c.mx===2?'Semi-limitada ':'')+(o.s>0?'★ sinergia ':'')+(o.a?'✦ fuera de lo común':'')+'&nbsp;</span><small class="d">'+(c.desc||'').replace(/</g,'&lt;')+'</small>';
-    b.onclick=()=>choose(c);$('off').appendChild(b);
-  });
-  let h='';
-  ['m','s','t'].forEach(k=>{const a=deck.filter(c=>c.k===k);if(a.length)h+=list(a,KN[k]+' ('+a.length+')')});
-  if(e)h+=list(ext,'Extra Deck ('+e+')');
-  $('dl').innerHTML=h;
-  if(done)$('end').innerHTML='<h2>Tu mazo (.ydk)</h2><p class="sub">Copialo a un archivo .ydk para importarlo en simuladores.</p><textarea readonly>'+ydk()+'</textarea>';
-}
-function start(){SEENA={};DECL={};deck=[];ext=[];phase='main';newOffer();render()}
-$('rs').onclick=start;
-$('sk').onclick=()=>{phase='done';render()};
-Promise.all([fetch('cards.json').then(r=>r.json()),fetch('rules.json').then(r=>r.json()).catch(()=>({}))]).then(([j,rl])=>{
-  GR=rl._groups||{};ENSURE=rl._ensure||[];Object.assign(RAR,rl._rarity||{});Object.assign(POP,rl._pop||{});if(rl._fresh!=null)FRESH=+rl._fresh;RULES=loadRules(rl);
-  C=j.cards.filter(c=>!c.ex);X=j.cards.filter(c=>c.ex);
-  start();
-}).catch(()=>{$('hd').textContent='No se pudo cargar cards.json. Corré build_pool.py y abrí la página con un servidor local (python -m http.server).'});
-</script>
+
+<!-- All the logic lives in app.js. Needs cards.json, rules.json and images_hd/ in the same folder,
+     served over http (not file://). -->
+<script src="app.js"></script>
 </body>
 </html>
