@@ -63,7 +63,12 @@ let CFG = {
   // Igual que `tiers` pero para los 15 picks del Extra Deck (fusiones de tier S/A/B cargadas en los .ydk de tier)
   extraTiers: { S: { weights: { 0: .5, 1: .5 } }, A: { min: 1, max: 2 }, B: { min: 2, max: 4 } },
   balance: { enabled: false, monsters: 20, spells: 10, traps: 10, strength: .4 },
-  extraRepeatBoost: .8      // Extra Deck: cada copia ya elegida multiplica el peso por (1 + este valor)
+  extraRepeatBoost: .8,     // Extra Deck: cada copia ya elegida multiplica el peso por (1 + este valor)
+  // Anti-repetición del pool aleatorio:
+  //  cooldown / cooldownExtra: picks durante los que una carta recién ofrecida NO vuelve a salir (main / extra),
+  //                            siempre que queden otras cartas; si el pool es chico se usa todo el pool.
+  //  penalty: cada vez que una carta se ofrece y no la elegís, su peso se multiplica por este valor (1 = sin penalización)
+  repeat: { cooldown: 4, cooldownExtra: 2, penalty: .6 }
 };
 
 let R = [];                          // pool aleatorio del main (tier R)
@@ -73,6 +78,8 @@ let TPX = { S: [], A: [], B: [] };   // fusiones de cada tier
 let deck = [], ext = [], offer = [], phase = 'main';   // 'main' -> 'extra' -> 'done'
 let SCHED = {};                      // calendario del main: índice de pick (0-39) -> 'S' | 'A' | 'B'
 let XSCHED = {};                     // calendario del Extra Deck: índice de pick (0-14) -> 'S' | 'A' | 'B'
+let LAST = {};                       // id -> índice del último pick donde se ofreció la carta (para el descanso)
+let DECL = {};                       // id -> veces que se ofreció y NO la elegiste (para la penalización)
 let SHOWN = new Set();               // ids de cartas de tier ya ofrecidas en este draft (para no repetirlas)
 let status = 'loading';              // 'loading' | 'ok' | 'error'
 
@@ -125,6 +132,7 @@ function makeSchedule() {
 
 
 /* ---------- 4. GENERACIÓN DE OFERTAS ----------
+ * ANTI-REPETICIÓN (pool aleatorio, main y extra): descanso (cooldown) + penalización por rechazos, ver CFG.repeat.
  * MAIN: si el pick tiene evento de tier, 1 carta de ese tier (que no se haya ofrecido antes si es posible)
  *       + el resto del pool aleatorio. Pool aleatorio = uniforme (con balance opcional, ver CFG.balance).
  * EXTRA: misma idea con su propio calendario (XSCHED): 1 fusión del tier + el resto del pool aleatorio de
@@ -135,6 +143,13 @@ function balW(k, cur, d) {   // peso de equilibrio (1 si está apagado)
   const T3 = { m: b.monsters, s: b.spells, t: b.traps };
   return Math.min(6, Math.max(.1, Math.exp(b.strength * (T3[k] * d / SIZE - cur[k]))));
 }
+// Descanso: devuelve las cartas que NO se ofrecieron en los últimos `cd` picks (o todo el pool si ninguna descansó)
+const rested = (pool, idx, cd) => {
+  const r = pool.filter(c => !(c.id in LAST) || idx - LAST[c.id] > cd);
+  return r.length ? r : pool;
+};
+const decl = c => Math.pow(CFG.repeat.penalty, DECL[c.id] || 0);   // penalización por ofertas rechazadas
+
 function newOffer() {
   const out = [];
   if (phase === 'extra') {
@@ -146,9 +161,10 @@ function newOffer() {
     }
     const fillX = (src, wf) => {
       while (out.length < XOFFER) {
-        const pool = src.filter(c => av(c) && !out.includes(c));
+        let pool = src.filter(c => av(c) && !out.includes(c));
         if (!pool.length) break;
-        out.push(wpick(pool, wf));
+        pool = rested(pool, ext.length, CFG.repeat.cooldownExtra);
+        out.push(wpick(pool, c => wf(c) * decl(c)));
       }
     };
     fillX(RX, c => 1 + CFG.extraRepeatBoost * cnt(c));
@@ -164,20 +180,24 @@ function newOffer() {
     }
     const fill = src => {                                // completa hasta OFFER con cartas al azar
       while (out.length < OFFER) {
-        const pool = src.filter(c => av(c) && !out.includes(c));
+        let pool = src.filter(c => av(c) && !out.includes(c));
         if (!pool.length) break;
-        out.push(wpick(pool, c => balW(c.k, cur, d)));
+        pool = rested(pool, d, CFG.repeat.cooldown);     // evita lo ofrecido hace poco
+        out.push(wpick(pool, c => balW(c.k, cur, d) * decl(c)));
       }
     };
     fill(R);
     if (out.length < OFFER) fill([...TP.B, ...TP.A, ...TP.S]);   // pool aleatorio demasiado chico
   }
+  const idx = phase === 'extra' ? ext.length : deck.length;
+  out.forEach(c => { LAST[c.id] = idx; });            // recordar cuándo se ofreció
   offer = shuffle(out).map(c => ({ c }));
 }
 
 
 /* ---------- 5. ELEGIR, EXPORTAR, DIBUJAR ---------- */
 function choose(c) {
+  offer.forEach(o => { if (o.c !== c) DECL[o.c.id] = (DECL[o.c.id] || 0) + 1; });   // las no elegidas cuentan como rechazadas
   if (phase === 'main') { deck.push(c); if (deck.length >= SIZE) phase = 'extra'; }
   else { ext.push(c); if (ext.length >= XSIZE) phase = 'done'; }
   if (phase !== 'done') { newOffer(); if (!offer.length) phase = 'done'; }
@@ -229,7 +249,7 @@ function render() {
       '<p class="sub">' + T.tiersGot + ': S ' + g.S + ' · A ' + g.A + ' · B ' + g.B + '</p><textarea readonly>' + ydk() + '</textarea>';
   }
 }
-function start() { SHOWN = new Set(); deck = []; ext = []; phase = 'main'; makeSchedule(); newOffer(); render(); }
+function start() { SHOWN = new Set(); LAST = {}; DECL = {}; deck = []; ext = []; phase = 'main'; makeSchedule(); newOffer(); render(); }
 
 // Idioma
 function applyStatic() {
@@ -258,6 +278,7 @@ Promise.all([
   for (const t of ['S', 'A', 'B']) if (cfg.tiers && cfg.tiers[t]) CFG.tiers[t] = cfg.tiers[t];
   for (const t of ['S', 'A', 'B']) if (cfg.extraTiers && cfg.extraTiers[t]) CFG.extraTiers[t] = cfg.extraTiers[t];
   Object.assign(CFG.balance, cfg.balance || {});
+  Object.assign(CFG.repeat, cfg.repeat || {});
   if (cfg.extraRepeatBoost != null) CFG.extraRepeatBoost = +cfg.extraRepeatBoost;
   const all = j.cards;
   R = all.filter(c => !c.ex && c.t === 'R');

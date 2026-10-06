@@ -10,5 +10,6 @@
     "B": { "min": 2, "max": 4 }
   },
   "balance": { "enabled": false, "monsters": 20, "spells": 10, "traps": 10, "strength": 0.4 },
+  "repeat": { "cooldown": 4, "cooldownExtra": 2, "penalty": 0.6 },
   "extraRepeatBoost": 0.8
 }

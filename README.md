@@ -52,8 +52,9 @@ descargan muchas más imágenes (cientos de MB); mirá la sección 6.
 2. **Pick con evento:** 1 carta del tier (se prefieren cartas del tier que aún no se ofrecieron en este draft) +
    3 del pool aleatorio. **Pick normal:** 4 del pool aleatorio. Las cartas de tier se muestran con borde de color
    (S dorado con brillo, A violeta, B azul) y la etiqueta "Tier S/A/B".
-3. El pool aleatorio es **uniforme**: todas las cartas tienen la misma probabilidad, sin popularidad ni sinergia.
-   Siempre se respeta la banlist (copias máximas).
+3. El pool aleatorio es **uniforme** (sin popularidad ni sinergia) con una salvedad: **anti-repetición**. Una carta que se
+   ofreció hace poco *descansa* (`cooldown` picks sin volver a salir) y cada vez que se te ofrece y elegís otra pesa menos
+   (`penalty`). Siempre se respeta la banlist (copias máximas).
 4. Tras 40 picks empieza el **Extra Deck**: hasta 15 picks de 3 fusiones, con **su propio calendario de tiers**
    (`extraTiers` en `config.json`). Por defecto es más exigente: S 0 o 1 vez (50%/50%), A 1 o 2, B 2 a 4. Un pick con evento trae
    1 fusión del tier + 2 del pool aleatorio de fusiones (las de tier R); el resto, 3 aleatorias. Las fusiones ya elegidas
@@ -75,6 +76,7 @@ descargan muchas más imágenes (cientos de MB); mirá la sección 6.
     "A": { "min": 1, "max": 2 },
     "B": { "min": 2, "max": 4 }
   },
+  "repeat": { "cooldown": 4, "cooldownExtra": 2, "penalty": 0.6 },
   "balance": { "enabled": false, "monsters": 20, "spells": 10, "traps": 10, "strength": 0.4 },
   "extraRepeatBoost": 0.8
 }
@@ -88,6 +90,8 @@ descargan muchas más imágenes (cientos de MB); mirá la sección 6.
 | `balance.enabled` | `false` = puro azar. `true` = las ofertas aleatorias favorecen levemente el tipo (monstruo/magia/trampa) que te falta |
 | `balance.monsters/spells/traps` | Objetivo de composición sobre 40 cartas |
 | `balance.strength` | Qué tan fuerte empuja (0,4 ≈ el de la v1). Más bajo = más suave |
+| `repeat.cooldown` / `cooldownExtra` | Picks durante los que una carta recién ofrecida no vuelve a salir en el main / en el Extra. Si el pool es chico y no alcanzan cartas descansadas, se usa todo el pool. `0` lo desactiva |
+| `repeat.penalty` | Multiplicador de peso por cada vez que la carta se ofreció y no la elegiste (1 = sin penalización; 0,6 = cada rechazo la baja 40%) |
 | `extraRepeatBoost` | Boost por copia ya elegida en el Extra Deck |
 
 Si `config.json` falta o tiene un error de sintaxis, se usan los valores por defecto **sin avisar**.
