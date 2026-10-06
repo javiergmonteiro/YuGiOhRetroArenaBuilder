@@ -26,7 +26,9 @@ const TT = {
     done: '¡Mazo completo!',
     pick: (n, t) => 'Pick ' + n + ' de ' + t,
     extraPick: (n, t) => 'Extra Deck: pick ' + n + ' de ' + t,
-    limited: 'Limitada', semi: 'Semi-limitada', tier: 'Tier',
+    limited: 'Limitada', semi: 'Semi-limitada', tier: 'Tier', level: 'Nivel', curve: 'Niveles de monstruos (main)',
+    sub: { Normal: 'Normal', 'Quick-Play': 'Rápida', Continuous: 'Continua', Equip: 'Equipo', Field: 'Campo', Ritual: 'Ritual', Counter: 'Contraria' },
+    frames: { normal: 'Normal', effect: 'Efecto', ritual: 'Ritual', fusion: 'Fusión', spell: 'Magia', trap: 'Trampa' },
     endTitle: 'Tu mazo (.ydk)', endHelp: 'Copialo a un archivo .ydk para importarlo en simuladores.',
     tiersGot: 'Cartas de tier en tu mazo',
     loadError: 'No se pudo cargar cards.json. Corré build_pool.py y abrí la página con un servidor local (python -m http.server).'
@@ -39,7 +41,9 @@ const TT = {
     done: 'Deck complete!',
     pick: (n, t) => 'Pick ' + n + ' of ' + t,
     extraPick: (n, t) => 'Extra Deck: pick ' + n + ' of ' + t,
-    limited: 'Limited', semi: 'Semi-limited', tier: 'Tier',
+    limited: 'Limited', semi: 'Semi-limited', tier: 'Tier', level: 'Level', curve: 'Monster levels (main)',
+    sub: { Normal: 'Normal', 'Quick-Play': 'Quick-Play', Continuous: 'Continuous', Equip: 'Equip', Field: 'Field', Ritual: 'Ritual', Counter: 'Counter' },
+    frames: { normal: 'Normal', effect: 'Effect', ritual: 'Ritual', fusion: 'Fusion', spell: 'Spell', trap: 'Trap' },
     endTitle: 'Your deck (.ydk)', endHelp: 'Copy it into a .ydk file to import it into a simulator.',
     tiersGot: 'Tier cards in your deck',
     loadError: 'Could not load cards.json. Run build_pool.py and open the page through a local server (python -m http.server).'
@@ -208,12 +212,49 @@ function ydk() {
   return '#created by Arena GOAT\n#main\n' + id(deck) + '\n#extra\n' + id(ext) + '\n!side\n';
 }
 const tl = c => 'ABS'.includes(c.t) && c.t ? '<span class="tl t' + c.t + '">' + c.t + '</span>' : '';   // mini-etiqueta de tier
+// Color del marco de la carta (como en el juego): normal amarillo, efecto naranja, ritual azul,
+// fusión violeta, magia verde, trampa magenta. Los colores están en style.css (.f-normal, .f-effect...).
+function frame(c) {
+  const t = c.ty || '';
+  return t.includes('Spell') ? 'spell' : t.includes('Trap') ? 'trap' : t.includes('Fusion') ? 'fusion'
+    : t.includes('Ritual') ? 'ritual' : t.includes('Normal') ? 'normal' : 'effect';
+}
+const AT = { DARK: '闇', LIGHT: '光', EARTH: '地', WATER: '水', FIRE: '炎', WIND: '風', DIVINE: '神' };   // kanji de cada atributo
+const stat = v => v == null ? '' : v < 0 ? '?' : v;   // ATK/DEF (-1 = "?")
+// Estrellas (nivel): 'number' -> ★4 (compacto) · 'stars' -> ★★★★ (una estrella por nivel)
+const LEVEL_STYLE = 'number';
+const lvTxt = c => LEVEL_STYLE === 'stars' ? '★'.repeat(c.lv) : '★' + c.lv;
+
+// Una fila de la lista lateral: [tier][atributo | tipo de magia/trampa] nombre ... ★nivel ATK / DEF ×copias
+function row(c, n) {
+  const mon = c.k === 'm';
+  const lead = mon
+    ? '<span class="at a-' + c.at + '" title="' + (c.at || '') + '">' + (AT[c.at] || '?') + '</span>'
+    : '<span class="sty">' + (T.sub[c.r] || c.r || '') + '</span>';
+  const lv = mon && c.lv ? '<span class="lv" title="' + T.level + ' ' + c.lv + '">' + lvTxt(c) + '</span>' : '';
+  const st = mon ? '<span class="st">' + lv + '<span title="ATK / DEF">' + stat(c.a) + ' / ' + stat(c.d) + '</span></span>' : '';
+  // data-img guarda el id de la imagen (vista previa al pasar el mouse) y el nombre es un enlace estático a ese archivo
+  const link = '<a class="cl" href="images_hd/' + c.img + '.jpg" target="_blank" rel="noopener">' + c.n + '</a>';
+  return '<div class="r f-' + frame(c) + '" data-img="' + c.img + '"><span class="rn">' + tl(c) + lead + link + '</span>' + st + '<span class="x">×' + n + '</span></div>';
+}
+// Gráfico de barras verticales con los monstruos del main por nivel (1 a 7 y "8+"), como la curva de maná de Hearthstone.
+// La altura es proporcional al nivel con más cartas (mínimo 4, para que las barras crezcan de a poco al principio).
+function curve() {
+  const n = Array(8).fill(0);                                   // índices 0..7 = niveles 1..7 y 8+
+  deck.forEach(c => { if (c.k === 'm' && c.lv) n[Math.min(c.lv, 8) - 1]++; });
+  const max = Math.max(4, ...n);
+  return n.map((v, i) => {
+    const lbl = i === 7 ? '8+' : i + 1;
+    return '<div class="cv-b" title="' + T.level + ' ' + lbl + ': ' + v + '"><span class="cv-n">' + (v || '') + '</span>' +
+      '<i style="height:' + Math.round(v / max * 60) + 'px"></i><span class="cv-l">' + lbl + '</span></div>';
+  }).join('');
+}
 function list(arr, title) {
   let h = '<div class="h">' + title + '</div>';
-  [...new Set(arr)].sort((a, b) => a.n.localeCompare(b.n))
-    .forEach(c => h += '<div><span>' + tl(c) + c.n + '</span><span>×' + arr.filter(x => x === c).length + '</span></div>');
+  [...new Set(arr)].sort((a, b) => a.n.localeCompare(b.n)).forEach(c => h += row(c, arr.filter(x => x === c).length));
   return h;
 }
+
 function render() {
   const d = deck.length, e = ext.length, done = phase === 'done', cur = kc();
   $('bar').style.width = ((d + e) / (SIZE + XSIZE) * 100) + '%';
@@ -241,6 +282,8 @@ function render() {
   ['m', 's', 't'].forEach(k => { const a = deck.filter(c => c.k === k); if (a.length) h += list(a, kn(k) + ' (' + a.length + ')'); });
   if (e) h += list(ext, 'Extra Deck (' + e + ')');
   $('dl').innerHTML = h;
+  $('cv').innerHTML = curve(); $('cv').title = T.curve;
+  $('lg').innerHTML = Object.keys(T.frames).map(k => '<span class="f-' + k + '">' + T.frames[k] + '</span>').join('');   // leyenda de colores
 
   if (done) {
     const g = { S: 0, A: 0, B: 0 };
@@ -249,6 +292,26 @@ function render() {
       '<p class="sub">' + T.tiersGot + ': S ' + g.S + ' · A ' + g.A + ' · B ' + g.B + '</p><textarea readonly>' + ydk() + '</textarea>';
   }
 }
+// ---- Vista previa: al pasar el MOUSE por una fila de la lista se muestra la carta completa junto al cursor.
+// (En pantallas táctiles no hay "hover": ahí el nombre es un enlace que abre la imagen en otra pestaña.)
+const pv = $('pv'), pvi = $('pvi');
+const rowOf = e => e.target && e.target.closest ? e.target.closest('.r') : null;
+function placePv(e) {                    // a la izquierda del cursor (la lista está a la derecha); si no entra, a la derecha
+  const w = pv.offsetWidth || 280, h = pv.offsetHeight || 410;
+  let x = e.clientX - w - 18; if (x < 8) x = e.clientX + 18;
+  const y = Math.min(Math.max(e.clientY - h / 2, 8), window.innerHeight - h - 8);
+  pv.style.left = x + 'px'; pv.style.top = y + 'px';
+}
+$('dl').onpointerover = e => {
+  if (e.pointerType !== 'mouse') return;
+  const r = rowOf(e);
+  if (!r || !r.dataset.img) { pv.style.display = 'none'; return; }
+  pvi.src = 'images_hd/' + r.dataset.img + '.jpg';
+  pv.style.display = 'block'; placePv(e);
+};
+$('dl').onpointermove = e => { if (pv.style.display === 'block') placePv(e); };
+$('dl').onpointerleave = () => { pv.style.display = 'none'; };
+
 function start() { SHOWN = new Set(); LAST = {}; DECL = {}; deck = []; ext = []; phase = 'main'; makeSchedule(); newOffer(); render(); }
 
 // Idioma

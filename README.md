@@ -60,7 +60,15 @@ descargan muchas más imágenes (cientos de MB); mirá la sección 6.
    1 fusión del tier + 2 del pool aleatorio de fusiones (las de tier R); el resto, 3 aleatorias. Las fusiones ya elegidas
    pesan `1 + extraRepeatBoost × copias` para que las duplicadas salgan más, y las de tier ya ofrecidas pesan ×0,3.
    Botón "Finish Extra" para cortar antes.
-5. Al final se muestra el mazo en formato `.ydk` y cuántas cartas de tier conseguiste.
+5. La **lista lateral** colorea cada carta como su marco real (normal amarillo, efecto naranja, ritual azul, fusión violeta,
+   magia verde, trampa magenta), con insignia de atributo (kanji), nivel (★4) y ATK / DEF en los monstruos (`LEVEL_STYLE` en `app.js` cambia ★4 por una estrella por nivel), y el tipo (rápida, continua,
+   equipo, campo…) en magias y trampas. Todo sale de los datos de `cards.json`; no hay íconos que descargar.
+6. **Gráfico de niveles:** sobre la lista hay un gráfico de barras verticales con los monstruos del main por nivel (1 a 7 y 8+),
+   como la curva de maná de Hearthstone. Se actualiza en cada pick.
+7. **Vista previa:** al pasar el mouse por una carta de la lista lateral aparece la carta completa junto al cursor. El nombre
+   es además un **enlace estático** a su imagen (`images_hd/<id>.jpg`), que se abre en otra pestaña (es lo que se usa en pantallas
+   táctiles, donde no existe el hover).
+8. Al final se muestra el mazo en formato `.ydk` y cuántas cartas de tier conseguiste.
 
 ## 4. `config.json`
 

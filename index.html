@@ -31,7 +31,9 @@
     <!-- Right column: chosen deck -->
     <div class="pn">
       <h2>Main <span id="n">0</span>/40 · Extra <span id="ne">0</span>/15</h2>
-      <div class="dl" id="dl"></div>                  <!-- deck list grouped by card type -->
+      <div class="cv" id="cv"></div>                  <!-- monster level chart (vertical bars), drawn by app.js -->
+      <div class="dl" id="dl"></div>                  <!-- deck list grouped by card type, colored by card frame -->
+      <div class="lg" id="lg"></div>                  <!-- color legend (filled by app.js) -->
       <div style="margin-top:10px">
         <button class="b" id="sk" style="display:none" data-t="finishExtra">Finish Extra</button>  <!-- Extra Deck phase only -->
         <button class="b" id="rs" data-t="restart">Restart</button>
@@ -42,6 +44,9 @@
 
 <!-- All the logic lives in app.js. Needs cards.json, rules.json and images_hd/ in the same folder,
      served over http (not file://). -->
+<!-- Card preview shown when hovering a row of the deck list (positioned and filled by app.js) -->
+<div id="pv"><img id="pvi" alt=""></div>
+
 <script src="app.js"></script>
 </body>
 </html>

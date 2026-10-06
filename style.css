@@ -78,8 +78,6 @@ h1 { margin: 0; font-size: 1.5rem; }
 .pn { background: var(--pn); border: 1px solid var(--bd); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
 .pn h2 { font-size: 1rem; margin: 0 0 8px; }
 .dl { font-size: .95rem; }                                          /* lista de cartas elegidas (sin scroll interno) */
-.dl div { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dotted var(--bd); }
-.dl .h { font-weight: bold; border: 0; color: var(--mut); margin-top: 6px; }   /* encabezado de sección (Monstruos, Magias...) */
 
 /* ---------- 6. BOTONES Y TEXTAREA FINAL ---------- */
 button.b { background: var(--ac); color: var(--bg); border: 0; border-radius: 6px; padding: 8px 14px; font: inherit; cursor: pointer; margin-right: 6px; margin-bottom: 6px; }
@@ -95,3 +93,44 @@ textarea { width: 100%; height: 200px; background: var(--bg); color: var(--fg); 
 .tier { font-weight: bold; }
 .tS .tier, .tl.tS { color: #d4a017; } .tA .tier, .tl.tA { color: #9b59b6; } .tB .tier, .tl.tB { color: #3b82f6; }
 .tl { font-size: .7rem; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; margin-right: 6px; }
+
+/* ---------- 8. LISTA DEL MAZO CON COLOR ----------
+ * Cada fila (.r) toma el color del marco de la carta (--c, definido por .f-*) en el borde izquierdo y un fondo suave.
+ * Monstruos: insignia de atributo (.at) + ATK / DEF (.st). Magias/trampas: pastilla con el tipo (.sty). */
+.dl .h { font-weight: bold; color: var(--mut); margin-top: 8px; }
+.dl .r { display: flex; align-items: center; gap: 8px; padding: 4px 6px; margin: 3px 0; border-left: 4px solid var(--c); border-radius: 4px;
+         background: var(--pn); background: color-mix(in srgb, var(--c) 16%, transparent); }
+.dl .rn { flex: 1; min-width: 0; }                                   /* el nombre ocupa el espacio y se parte si es largo (sin scroll) */
+.dl .st { font-size: .78rem; color: var(--mut); white-space: nowrap; }
+.dl .lv { color: #d4a017; font-weight: bold; margin-right: 6px; }   /* estrellas (nivel) */
+.dl .x { font-weight: bold; }
+.f-normal { --c: #c9a227; } .f-effect { --c: #d0702e; } .f-ritual { --c: #3a78c4; }
+.f-fusion { --c: #8a56b8; } .f-spell { --c: #1f9e78; }  .f-trap   { --c: #c0408a; }
+/* Insignia circular del atributo (kanji) */
+.at { display: inline-block; width: 1.4em; height: 1.4em; line-height: 1.4em; text-align: center; border-radius: 50%; font-size: .72rem;
+      color: #fff; margin-right: 5px; vertical-align: middle; }
+.a-DARK { background: #5b3b7a; } .a-LIGHT { background: #c9a227; } .a-EARTH { background: #8a6a3a; } .a-WATER { background: #3b82c4; }
+.a-FIRE { background: #d6532b; } .a-WIND { background: #3aa56b; } .a-DIVINE { background: #b8913a; }
+/* Pastilla con el tipo de magia/trampa (Rápida, Continua, Equipo, Campo...) */
+.sty { display: inline-block; font-size: .68rem; border: 1px solid var(--c); border-radius: 8px; padding: 0 6px; margin-right: 5px; vertical-align: middle; }
+/* Leyenda de colores bajo la lista */
+.lg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; font-size: .72rem; }
+.lg span { border-left: 4px solid var(--c); padding: 1px 6px; border-radius: 3px; background: color-mix(in srgb, var(--c) 16%, transparent); }
+
+/* ---------- 9. VISTA PREVIA DE LA CARTA ----------
+ * #pv es una capa flotante (position: fixed) que app.js posiciona junto al cursor al pasar el mouse por la lista.
+ * pointer-events: none evita que la capa tape la lista y provoque parpadeo. */
+#pv { position: fixed; display: none; z-index: 50; width: 280px; pointer-events: none; border-radius: 8px;
+      background: var(--pn); box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+#pv img { display: block; width: 100%; border-radius: 8px; }
+.dl .cl { color: inherit; text-decoration: none; }        /* el nombre es un enlace a la imagen, pero se ve como texto normal */
+.dl .cl:hover { text-decoration: underline; }
+
+/* ---------- 10. GRÁFICO DE NIVELES (barras verticales) ----------
+ * Una columna (.cv-b) por nivel: número de cartas arriba (.cv-n), barra (<i>) y nivel abajo (.cv-l).
+ * La altura de cada barra la calcula app.js (en px, máximo 60). */
+.cv { display: flex; gap: 4px; align-items: flex-end; height: 98px; margin: 4px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--bd); }
+.cv-b { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.cv-b i { display: block; width: 100%; min-height: 2px; background: var(--ac); border-radius: 3px 3px 0 0; opacity: .85; transition: height .25s; }
+.cv-n { font-size: .72rem; min-height: 1em; margin-bottom: 2px; }
+.cv-l { font-size: .68rem; color: var(--mut); margin-top: 3px; }
