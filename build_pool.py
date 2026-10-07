@@ -111,8 +111,27 @@ for t in "SAB":
 for t, ns in dropped.items():
     print(f"AVISO: prohibidas en GOAT, ignoradas (tier {t}): {', '.join(sorted(ns))}")
 
+# Temas (themes.json): etiquetas por carta para el "eco" del draft (elegir un tema hace que salga más seguido)
+themes = {}
+if os.path.exists("themes.json"):
+    byname = {c["n"].lower(): c for c in pool.values()}
+    for key, th in json.load(open("themes.json", encoding="utf-8")).items():
+        themes[key] = {"es": th.get("es", key), "en": th.get("en", key), "color": th.get("color", "")}
+        got, miss = [], []
+        for n in th.get("cards", []):
+            c = byname.get(n.lower())
+            if not c:
+                miss.append(n)
+            elif key not in c.setdefault("g", []):
+                c["g"].append(key)
+                got.append(c)
+        common = sum(c["t"] == "R" for c in got)
+        print(f"Tema {key}: {len(got)} cartas ({common} comunes, {len(got) - common} de tier)")
+        if miss:
+            print(f"AVISO: tema {key}, cartas que no están en el pool: {', '.join(miss)}")
+
 with open("cards.json", "w", encoding="utf-8") as fh:
-    json.dump({"cards": list(pool.values())}, fh, ensure_ascii=False)
+    json.dump({"cards": list(pool.values()), "themes": themes}, fh, ensure_ascii=False)
 
 # Imágenes: YGOPRODeck pide descargarlas y hostearlas (no enlazarlas). Las ya descargadas se saltean.
 for i in pool:

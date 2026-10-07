@@ -30,7 +30,7 @@ const TT = {
     sub: { Normal: 'Normal', 'Quick-Play': 'Rápida', Continuous: 'Continua', Equip: 'Equipo', Field: 'Campo', Ritual: 'Ritual', Counter: 'Contraria' },
     frames: { normal: 'Normal', effect: 'Efecto', ritual: 'Ritual', fusion: 'Fusión', spell: 'Magia', trap: 'Trampa' },
     endTitle: 'Tu mazo (.ydk)', endHelp: 'Copialo a un archivo .ydk para importarlo en simuladores.',
-    tiersGot: 'Cartas de tier en tu mazo',
+    tiersGot: 'Cartas de tier en tu mazo', themes: 'Temas',
     loadError: 'No se pudo cargar cards.json. Corré build_pool.py y abrí la página con un servidor local (python -m http.server).'
   },
   en: {
@@ -45,7 +45,7 @@ const TT = {
     sub: { Normal: 'Normal', 'Quick-Play': 'Quick-Play', Continuous: 'Continuous', Equip: 'Equip', Field: 'Field', Ritual: 'Ritual', Counter: 'Counter' },
     frames: { normal: 'Normal', effect: 'Effect', ritual: 'Ritual', fusion: 'Fusion', spell: 'Spell', trap: 'Trap' },
     endTitle: 'Your deck (.ydk)', endHelp: 'Copy it into a .ydk file to import it into a simulator.',
-    tiersGot: 'Tier cards in your deck',
+    tiersGot: 'Tier cards in your deck', themes: 'Themes',
     loadError: 'Could not load cards.json. Run build_pool.py and open the page through a local server (python -m http.server).'
   }
 };
@@ -72,7 +72,11 @@ let CFG = {
   //  cooldown / cooldownExtra: picks durante los que una carta recién ofrecida NO vuelve a salir (main / extra),
   //                            siempre que queden otras cartas; si el pool es chico se usa todo el pool.
   //  penalty: cada vez que una carta se ofrece y no la elegís, su peso se multiplica por este valor (1 = sin penalización)
-  repeat: { cooldown: 4, cooldownExtra: 2, penalty: .6 }
+  repeat: { cooldown: 4, cooldownExtra: 2, penalty: .6 },
+  // Eco de temas (themes.json): cada carta de un tema ya elegida sube el peso de las comunes de ese tema
+  //  peso = 1 + strength × min(cartas del tema en el mazo, max)   (si la carta tiene varios temas, cuenta el mayor)
+  //  show: mostrar los temas en las ofertas y en el panel del mazo
+  echo: { strength: .35, max: 6, show: true }
 };
 
 let R = [];                          // pool aleatorio del main (tier R)
@@ -84,6 +88,7 @@ let SCHED = {};                      // calendario del main: índice de pick (0-
 let XSCHED = {};                     // calendario del Extra Deck: índice de pick (0-14) -> 'S' | 'A' | 'B'
 let LAST = {};                       // id -> índice del último pick donde se ofreció la carta (para el descanso)
 let DECL = {};                       // id -> veces que se ofreció y NO la elegiste (para la penalización)
+let THEMES = {};                     // tema -> { es, en } (nombres para mostrar)
 let SHOWN = new Set();               // ids de cartas de tier ya ofrecidas en este draft (para no repetirlas)
 let status = 'loading';              // 'loading' | 'ok' | 'error'
 
@@ -153,6 +158,15 @@ const rested = (pool, idx, cd) => {
   return r.length ? r : pool;
 };
 const decl = c => Math.pow(CFG.repeat.penalty, DECL[c.id] || 0);   // penalización por ofertas rechazadas
+function themeCount() {   // tema -> cartas del main ya elegidas con ese tema
+  const n = {};
+  deck.forEach(c => (c.g || []).forEach(g => { n[g] = (n[g] || 0) + 1; }));
+  return n;
+}
+function echoW(c, n) {    // eco: las comunes de un tema que ya estás jugando salen más seguido
+  if (!c.g) return 1;
+  return 1 + CFG.echo.strength * Math.min(Math.max(...c.g.map(g => n[g] || 0)), CFG.echo.max);
+}
 
 function newOffer() {
   const out = [];
@@ -174,7 +188,7 @@ function newOffer() {
     fillX(RX, c => 1 + CFG.extraRepeatBoost * cnt(c));
     if (out.length < XOFFER) fillX([...TPX.B, ...TPX.A, ...TPX.S], w);   // pool aleatorio demasiado chico
   } else {
-    const d = deck.length, cur = kc(), tier = SCHED[d];
+    const d = deck.length, cur = kc(), tier = SCHED[d], tn = themeCount();
     const av = c => cnt(c) < c.mx;                       // respeta la banlist (copias máximas)
     if (tier) {                                          // evento de tier en este pick
       let pool = TP[tier].filter(av);
@@ -187,7 +201,7 @@ function newOffer() {
         let pool = src.filter(c => av(c) && !out.includes(c));
         if (!pool.length) break;
         pool = rested(pool, d, CFG.repeat.cooldown);     // evita lo ofrecido hace poco
-        out.push(wpick(pool, c => balW(c.k, cur, d) * decl(c)));
+        out.push(wpick(pool, c => balW(c.k, cur, d) * decl(c) * echoW(c, tn)));
       }
     };
     fill(R);
@@ -255,6 +269,10 @@ function list(arr, title) {
   return h;
 }
 
+const thName = g => (THEMES[g] && THEMES[g][LANG]) || g;
+const thTag = (g, n) => '<span class="th"' + (THEMES[g] && THEMES[g].color ? ' style="--c:' + THEMES[g].color + '"' : '') + '>' +
+  thName(g) + (n ? ' <b>' + n + '</b>' : '') + '</span>';   // recuadro de tema con su color
+
 function render() {
   const d = deck.length, e = ext.length, done = phase === 'done', cur = kc();
   $('bar').style.width = ((d + e) / (SIZE + XSIZE) * 100) + '%';
@@ -273,6 +291,7 @@ function render() {
     b.innerHTML = img(c) + '<b>' + c.n + '</b><span class="tag">' +
       (isT ? '<span class="tier">' + T.tier + ' ' + c.t + '</span> ' : '') +
       (c.mx === 1 ? T.limited + ' ' : c.mx === 2 ? T.semi + ' ' : '') +
+      (CFG.echo.show && c.g ? c.g.map(g => thTag(g)).join('') : '') +
       '&nbsp;</span><small class="d">' + (c.desc || '').replace(/</g, '&lt;') + '</small>';
     b.onclick = () => choose(c);
     $('off').appendChild(b);
@@ -281,6 +300,10 @@ function render() {
   let h = '';
   ['m', 's', 't'].forEach(k => { const a = deck.filter(c => c.k === k); if (a.length) h += list(a, kn(k) + ' (' + a.length + ')'); });
   if (e) h += list(ext, 'Extra Deck (' + e + ')');
+  if (CFG.echo.show) {                                   // temas con 2+ cartas en el main
+    const tn = themeCount(), ts = Object.keys(tn).filter(g => tn[g] >= 2).sort((a, b) => tn[b] - tn[a]);
+    if (ts.length) h = '<div class="ths" title="' + T.themes + '">' + ts.map(g => thTag(g, tn[g])).join('') + '</div>' + h;
+  }
   $('dl').innerHTML = h;
   $('cv').innerHTML = curve(); $('cv').title = T.curve;
   $('lg').innerHTML = Object.keys(T.frames).map(k => '<span class="f-' + k + '">' + T.frames[k] + '</span>').join('');   // leyenda de colores
@@ -342,6 +365,8 @@ Promise.all([
   for (const t of ['S', 'A', 'B']) if (cfg.extraTiers && cfg.extraTiers[t]) CFG.extraTiers[t] = cfg.extraTiers[t];
   Object.assign(CFG.balance, cfg.balance || {});
   Object.assign(CFG.repeat, cfg.repeat || {});
+  Object.assign(CFG.echo, cfg.echo || {});
+  THEMES = j.themes || {};
   if (cfg.extraRepeatBoost != null) CFG.extraRepeatBoost = +cfg.extraRepeatBoost;
   const all = j.cards;
   R = all.filter(c => !c.ex && c.t === 'R');

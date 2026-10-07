@@ -1,0 +1,80 @@
+{
+  "zombie": { "es": "Zombi", "en": "Zombie", "color": "#6b8e23", "cards": [
+    "Pyramid Turtle", "Ryu Kokki", "Vampire Lord", "Vampire Baby", "Spirit Reaper",
+    "Des Lacooda", "Book of Life", "Call of the Haunted", "Soul Release", "The Shallow Grave",
+    "Last Will"
+  ]},
+  "burn": { "es": "Burn", "en": "Burn", "color": "#e0552b", "cards": [
+    "Cannon Soldier", "Toon Cannon Soldier", "Lava Golem", "Just Desserts", "Ceasefire",
+    "Secret Barrel", "Chain Energy", "Wave-Motion Cannon", "Mass Driver", "Catapult Turtle",
+    "Stealth Bird", "Nightmare Wheel", "Poison of the Old Man", "Magic Cylinder", "Self-Destruct Button",
+    "Ring of Destruction"
+  ]},
+  "lock": { "es": "Bloqueo", "en": "Stall", "color": "#4a90b8", "cards": [
+    "Gravity Bind", "Level Limit - Area B", "Messenger of Peace", "Swords of Revealing Light", "Swords of Concealing Light",
+    "Wall of Revealing Light", "Kaiser Colosseum", "Stumbling", "Light of Intervention", "Waboku",
+    "Threatening Roar", "Hallowed Life Barrier", "Scapegoat", "Nightmare Wheel", "Final Attack Orders",
+    "Xing Zhen Hu", "Big Shield Gardna"
+  ]},
+  "exodia": { "es": "Exodia / Biblioteca", "en": "Exodia / Library", "color": "#c9a227", "cards": [
+    "Exodia the Forbidden One", "Left Arm of the Forbidden One", "Right Arm of the Forbidden One", "Left Leg of the Forbidden One", "Right Leg of the Forbidden One",
+    "Royal Magical Library", "Spellbook Organization", "Reload", "Back to Square One", "Reckless Greed",
+    "Emergency Provisions", "Spell Reproduction", "Upstart Goblin", "Card Destruction", "Jar of Greed",
+    "Serial Spell", "Messenger of Peace", "Swords of Revealing Light", "Magical Merchant"
+  ]},
+  "toon": { "es": "Toon", "en": "Toon", "color": "#e05aa8", "cards": [
+    "Toon World", "Toon Table of Contents", "Toon Cannon Soldier", "Toon Goblin Attack Force", "Blue-Eyes Toon Dragon",
+    "Manga Ryu-Ran", "Toon Defense", "Toon Gemini Elf", "Toon Masked Sorcerer", "Toon Mermaid",
+    "Toon Summoned Skull"
+  ]},
+  "monarch": { "es": "Monarcas", "en": "Monarchs", "color": "#8e6cc9", "cards": [
+    "Zaborg the Thunder Monarch", "Granmarg the Rock Monarch", "Thestalos the Firestorm Monarch", "Mobius the Frost Monarch", "Soul Exchange",
+    "Brain Control", "Enemy Controller", "Ojama Trio", "Royal Tribute", "Kaiser Glider",
+    "The End of Anubis"
+  ]},
+  "flip": { "es": "Volteo", "en": "Flip", "color": "#3aa39a", "cards": [
+    "Cyber Jar", "Morphing Jar", "Morphing Jar #2", "Penguin Soldier", "Old Vindictive Magician",
+    "Magician of Faith", "Book of Moon", "Book of Taiyou", "Tsukuyomi", "Night Assailant",
+    "Guardian Sphinx", "Golem Sentry", "Des Koala", "Mask of Darkness", "Stealth Bird",
+    "Dream Clown", "Byser Shock", "Needle Burrower"
+  ]},
+  "discard": { "es": "Descarte", "en": "Hand Control", "color": "#9c4a6e", "cards": [
+    "Mind Crush", "Drop Off", "Don Zaloog", "Dark Scorpion - Cliff the Trap Remover", "Spirit Reaper",
+    "Deck Devastation Virus", "Exchange", "Delinquent Duo", "Night Assailant", "Peten the Dark Clown"
+  ]},
+  "ritual": { "es": "Ritual", "en": "Ritual", "color": "#5a6fd6", "cards": [
+    "Relinquished", "Black Illusion Ritual", "Contract with the Dark Master", "Dark Master - Zorc", "Manju of the Ten Thousand Hands",
+    "Senju of the Thousand Hands", "Hand of Nephthys", "Sacred Phoenix of Nephthys"
+  ]},
+  "dd": { "es": "Destierro (D.D.)", "en": "Banish (D.D.)", "color": "#7a7a8c", "cards": [
+    "D.D. Crazy Beast", "D.D. Scout Plane", "D.D. Survivor", "D.D. Assailant", "Dimension Fusion",
+    "Return from the Different Dimension", "Banisher of the Light", "Soul Release", "Kycoo the Ghost Destroyer", "D.D. Warrior Lady",
+    "Chaos Sorcerer", "Different Dimension Capsule", "Interdimensional Matter Transporter", "Chaos Command Magician"
+  ]},
+  "warrior": { "es": "Guerreros", "en": "Warriors", "color": "#b5651d", "cards": [
+    "Marauding Captain", "Reinforcement of the Army", "The Warrior Returning Alive", "Exiled Force", "Blade Knight",
+    "Big Shield Gardna", "Mystic Swordsman LV2", "Mataza the Zapper", "Strike Ninja", "Ninja Grandmaster Sasuke",
+    "Gearfried the Iron Knight", "Armed Samurai - Ben Kei", "Backup Soldier", "D.D. Assailant", "D.D. Survivor",
+    "Don Zaloog", "Sasuke Samurai #4", "The Little Swordsman of Aile", "Swift Gaia the Fierce Knight", "Trap Master",
+    "Elemental HERO Avian", "Elemental HERO Burstinatrix", "Elemental HERO Clayman", "Elemental HERO Sparkman"
+  ]},
+  "beast": { "es": "Bestias (Rescue Cat)", "en": "Beasts (Rescue Cat)", "color": "#8b6b3e", "cards": [
+    "Rescue Cat", "Giant Rat", "King Tiger Wanghu", "Bazoo the Soul-Eater", "Berserk Gorilla",
+    "Gyaku-Gire Panda", "Neko Mane King", "Milus Radiant", "The Big March of Animals", "Des Koala",
+    "D.D. Crazy Beast", "Des Wombat"
+  ]},
+  "stun": { "es": "Anti-magia", "en": "Stun", "color": "#2f9e5b", "cards": [
+    "Royal Decree", "Royal Oppression", "Anti-Spell Fragrance", "Skill Drain", "Spell Canceller",
+    "Jinzo", "Prohibition", "Mask of Restrict", "Cursed Seal of the Forbidden Spell", "Magic Jammer",
+    "Seven Tools of the Bandit", "Magic Drain", "Spell Shield Type-8", "Barrel Behind the Door"
+  ]},
+  "gravekeeper": { "es": "Gravekeeper", "en": "Gravekeeper", "color": "#a0522d", "cards": [
+    "Gravekeeper's Spy", "Gravekeeper's Assailant", "Necrovalley", "Gravekeeper's Cannonholder", "Gravekeeper's Chief",
+    "Gravekeeper's Curse", "Gravekeeper's Guard", "Gravekeeper's Servant", "Gravekeeper's Spear Soldier", "Gravekeeper's Vassal",
+    "Gravekeeper's Watcher", "Royal Tribute"
+  ]},
+  "hero": { "es": "Héroes Elementales", "en": "Elemental HEROes", "color": "#d4a017", "cards": [
+    "Elemental HERO Avian", "Elemental HERO Burstinatrix", "Elemental HERO Clayman", "Elemental HERO Sparkman", "Elemental HERO Flame Wingman",
+    "Elemental HERO Thunder Giant", "Polymerization", "Hero Signal"
+  ]}
+}
