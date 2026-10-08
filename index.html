@@ -13,10 +13,18 @@
        The page always starts in English; EN | ES switches without reloading, so the draft in progress is kept. -->
   <div class="top">
     <h1 data-t="title">GOAT Arena</h1>
-    <div class="lang"><button data-lang="en" class="on">EN</button>|<button data-lang="es">ES</button></div>
+    <div class="topr">
+      <!-- Opens/closes the tiers view (#tiers in the URL); its text is set by app.js -->
+      <button class="lk" id="tvb">View tiers</button>
+      <div class="lang"><button data-lang="en" class="on">EN</button>|<button data-lang="es">ES</button></div>
+    </div>
   </div>
   <div class="sub" data-t="subtitle">Pick 1 of 4 cards for the main deck (40) and 1 of 3 for the Extra Deck (up to 15).</div>
 
+  <!-- Tiers view: grid with the S / A / B cards (filled by app.js, hidden while drafting) -->
+  <div id="tv" hidden></div>
+
+  <div id="draft">
   <!-- Progress bar: app.js sets its width (#bar) -->
   <div class="bar"><i id="bar"></i></div>
 
@@ -30,19 +38,34 @@
 
     <!-- Right column: chosen deck -->
     <div class="pn">
-      <h2>Main <span id="n">0</span>/40 · Extra <span id="ne">0</span>/15</h2>
+      <h2>Main <span id="n">0</span>/40 · Extra <span id="ne">0</span>/15<span id="sdh" hidden> · Side <span id="nsd">0</span>/15</span></h2>
       <div class="cv" id="cv"></div>                  <!-- monster level chart (vertical bars), drawn by app.js -->
       <div class="dl" id="dl"></div>                  <!-- deck list grouped by card type, colored by card frame -->
       <div class="lg" id="lg"></div>                  <!-- color legend (filled by app.js) -->
+      <!-- Side Deck option (off by default). Changing it mid-draft asks for confirmation and restarts -->
+      <label class="opt"><input type="checkbox" id="sd"> <span data-t="sideToggle">Play with Side Deck (15)</span></label>
       <div style="margin-top:10px">
         <button class="b" id="sk" style="display:none" data-t="finishExtra">Finish Extra</button>  <!-- Extra Deck phase only -->
         <button class="b" id="rs" data-t="restart">Restart</button>
       </div>
     </div>
   </div>
+  </div><!-- /#draft -->
 </div>
 
-<!-- All the logic lives in app.js. Needs cards.json, rules.json and images_hd/ in the same folder,
+<!-- Confirmation window (instead of the browser's confirm()); shown by confirmBox() in app.js -->
+<div id="md" class="md" hidden role="dialog" aria-modal="true" aria-labelledby="mdt">
+  <div class="md-b">
+    <h3 id="mdt" data-t="confirmTitle">Restart the draft?</h3>
+    <p data-t="confirmSide"></p>
+    <div class="md-a">
+      <button class="b2" id="mdn" data-t="cancel">Cancel</button>
+      <button class="b" id="mdy" data-t="confirmRestart">Restart</button>
+    </div>
+  </div>
+</div>
+
+<!-- All the logic lives in app.js. Needs cards.json, config.json and images_hd/ in the same folder,
      served over http (not file://). -->
 <!-- Card preview shown when hovering a row of the deck list (positioned and filled by app.js) -->
 <div id="pv"><img id="pvi" alt=""></div>

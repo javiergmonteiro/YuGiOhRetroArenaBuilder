@@ -31,6 +31,12 @@ const TT = {
     frames: { normal: 'Normal', effect: 'Efecto', ritual: 'Ritual', fusion: 'Fusión', spell: 'Magia', trap: 'Trampa' },
     endTitle: 'Tu mazo (.ydk)', endHelp: 'Copialo a un archivo .ydk para importarlo en simuladores.',
     tiersGot: 'Cartas de tier en tu mazo', themes: 'Temas',
+    sideToggle: 'Jugar con Side Deck (15)', finishSide: 'Terminar Side',
+    sidePick: (n, t) => 'Side Deck: pick ' + n + ' de ' + t,
+    confirmTitle: '¿Reiniciar el draft?', cancel: 'Cancelar', confirmRestart: 'Reiniciar',
+    confirmSide: 'Cambiar la opción de Side Deck reinicia el draft: vas a perder las cartas que elegiste hasta ahora.',
+    viewTiers: 'Ver tiers', backToDraft: 'Volver al draft', main: 'Main',
+    tiersHelp: 'Cartas de los tiers S, A y B (archivos decks/tier_*.ydk). Click en una carta para ver la imagen completa.',
     loadError: 'No se pudo cargar cards.json. Corré build_pool.py y abrí la página con un servidor local (python -m http.server).'
   },
   en: {
@@ -46,6 +52,12 @@ const TT = {
     frames: { normal: 'Normal', effect: 'Effect', ritual: 'Ritual', fusion: 'Fusion', spell: 'Spell', trap: 'Trap' },
     endTitle: 'Your deck (.ydk)', endHelp: 'Copy it into a .ydk file to import it into a simulator.',
     tiersGot: 'Tier cards in your deck', themes: 'Themes',
+    sideToggle: 'Play with Side Deck (15)', finishSide: 'Finish Side',
+    sidePick: (n, t) => 'Side Deck: pick ' + n + ' of ' + t,
+    confirmTitle: 'Restart the draft?', cancel: 'Cancel', confirmRestart: 'Restart',
+    confirmSide: 'Changing the Side Deck option restarts the draft: you will lose the cards you picked so far.',
+    viewTiers: 'View tiers', backToDraft: 'Back to draft', main: 'Main',
+    tiersHelp: 'Cards in tiers S, A and B (files decks/tier_*.ydk). Click a card to open the full image.',
     loadError: 'Could not load cards.json. Run build_pool.py and open the page through a local server (python -m http.server).'
   }
 };
@@ -53,7 +65,7 @@ let LANG = 'en', T = TT[LANG];
 
 
 /* ---------- 1. CONSTANTES Y ESTADO ---------- */
-const SIZE = 40, XSIZE = 15;    // main y Extra Deck
+const SIZE = 40, XSIZE = 15, SSIZE = 15;    // main, Extra Deck y Side Deck
 const OFFER = 4, XOFFER = 3;    // cartas por oferta (main / extra)
 const kn = k => ({ m: T.monsters, s: T.spells, t: T.traps })[k];
 
@@ -66,6 +78,8 @@ let CFG = {
   tiers: { S: { weights: { 1: .5, 2: .4, 3: .1 } }, A: { min: 4, max: 6 }, B: { min: 6, max: 10 } },
   // Igual que `tiers` pero para los 15 picks del Extra Deck (fusiones de tier S/A/B cargadas en los .ydk de tier)
   extraTiers: { S: { weights: { 0: .5, 1: .5 } }, A: { min: 1, max: 2 }, B: { min: 2, max: 4 } },
+  // Igual que `tiers` pero para los 15 picks del Side Deck (solo si se juega con side)
+  sideTiers: { S: { weights: { 0: .5, 1: .5 } }, A: { min: 1, max: 3 }, B: { min: 2, max: 4 } },
   balance: { enabled: false, monsters: 20, spells: 10, traps: 10, strength: .4 },
   extraRepeatBoost: .8,     // Extra Deck: cada copia ya elegida multiplica el peso por (1 + este valor)
   // Anti-repetición del pool aleatorio:
@@ -75,18 +89,22 @@ let CFG = {
   repeat: { cooldown: 4, cooldownExtra: 2, penalty: .6 },
   // Eco de temas (themes.json): cada carta de un tema ya elegida sube el peso de las comunes de ese tema
   //  peso = 1 + strength × min(cartas del tema en el mazo, max)   (si la carta tiene varios temas, cuenta el mayor)
-  //  show: mostrar los temas en las ofertas y en el panel del mazo
-  echo: { strength: .35, max: 6, show: true }
+  //  show: tags de tema en las ofertas -> true: todos · 'deck': solo los temas que ya jugás (showMin+ cartas) · false: ninguno
+  //        (el resumen de temas del panel del mazo se muestra salvo con false)
+  //  showMin: cartas de un tema en el main para que cuente como "tema que ya jugás" (modo 'deck' y resumen del panel)
+  echo: { strength: .35, max: 6, show: 'deck', showMin: 2 }
 };
 
 let R = [];                          // pool aleatorio del main (tier R)
 let TP = { S: [], A: [], B: [] };    // cartas de main de cada tier
 let RX = [];                         // pool aleatorio del Extra Deck (fusiones de tier R)
 let TPX = { S: [], A: [], B: [] };   // fusiones de cada tier
-let deck = [], ext = [], offer = [], phase = 'main';   // 'main' -> 'extra' -> 'done'
+let deck = [], ext = [], side = [], offer = [], phase = 'main';   // 'main' -> 'extra' -> ('side') -> 'done'
+let SIDE = false;                    // jugar con Side Deck (opción del panel, apagada por defecto)
 let SCHED = {};                      // calendario del main: índice de pick (0-39) -> 'S' | 'A' | 'B'
 let XSCHED = {};                     // calendario del Extra Deck: índice de pick (0-14) -> 'S' | 'A' | 'B'
-let LAST = {};                       // id -> índice del último pick donde se ofreció la carta (para el descanso)
+let SSCHED = {};                     // calendario del Side Deck: índice de pick (0-14) -> 'S' | 'A' | 'B'
+let LAST = {};                       // id -> número de pick global (main + extra + side) en que se ofreció (para el descanso)
 let DECL = {};                       // id -> veces que se ofreció y NO la elegiste (para la penalización)
 let THEMES = {};                     // tema -> { es, en } (nombres para mostrar)
 let SHOWN = new Set();               // ids de cartas de tier ya ofrecidas en este draft (para no repetirlas)
@@ -97,7 +115,8 @@ let status = 'loading';              // 'loading' | 'ok' | 'error'
 const $ = id => document.getElementById(id);
 const img = c => '<img loading="lazy" src="images_hd/' + c.img + '.jpg" alt="' + c.n.replace(/"/g, '') +
   '" onerror="this.style.visibility=\'hidden\'">';
-const cnt = c => (c.ex ? ext : deck).filter(x => x === c).length;   // copias ya elegidas
+const cnt = c => (c.ex ? ext : deck.concat(side)).filter(x => x === c).length;   // copias ya elegidas (main + side comparten el límite)
+const pickNo = () => deck.length + ext.length + side.length;          // picks hechos en todo el draft
 const kc = () => { const o = { m: 0, s: 0, t: 0 }; deck.forEach(c => o[c.k]++); return o; };
 
 function shuffle(a) {   // Fisher-Yates
@@ -137,6 +156,7 @@ function buildSchedule(size, pools, cfgs) {
 function makeSchedule() {
   SCHED = buildSchedule(SIZE, TP, CFG.tiers);
   XSCHED = buildSchedule(XSIZE, TPX, CFG.extraTiers);
+  SSCHED = buildSchedule(SSIZE, TP, CFG.sideTiers);
 }
 
 
@@ -145,7 +165,8 @@ function makeSchedule() {
  * MAIN: si el pick tiene evento de tier, 1 carta de ese tier (que no se haya ofrecido antes si es posible)
  *       + el resto del pool aleatorio. Pool aleatorio = uniforme (con balance opcional, ver CFG.balance).
  * EXTRA: misma idea con su propio calendario (XSCHED): 1 fusión del tier + el resto del pool aleatorio de
- *        fusiones. Las ya elegidas pesan (1 + extraRepeatBoost × copias); las de tier ya ofrecidas pesan ×0.3. */
+ *        fusiones. Las ya elegidas pesan (1 + extraRepeatBoost × copias); las de tier ya ofrecidas pesan ×0.3.
+ * SIDE: igual que el main, con su propio calendario (SSCHED) y sin balance de tipos. */
 function balW(k, cur, d) {   // peso de equilibrio (1 si está apagado)
   const b = CFG.balance;
   if (!b.enabled) return 1;
@@ -169,7 +190,7 @@ function echoW(c, n) {    // eco: las comunes de un tema que ya estás jugando s
 }
 
 function newOffer() {
-  const out = [];
+  const out = [], at = pickNo();
   if (phase === 'extra') {
     const tier = XSCHED[ext.length], av = c => cnt(c) < c.mx;
     const w = c => (1 + CFG.extraRepeatBoost * cnt(c)) * (SHOWN.has(c.id) ? .3 : 1);   // repetidas suben, ya ofrecidas de tier bajan
@@ -181,14 +202,14 @@ function newOffer() {
       while (out.length < XOFFER) {
         let pool = src.filter(c => av(c) && !out.includes(c));
         if (!pool.length) break;
-        pool = rested(pool, ext.length, CFG.repeat.cooldownExtra);
+        pool = rested(pool, at, CFG.repeat.cooldownExtra);
         out.push(wpick(pool, c => wf(c) * decl(c)));
       }
     };
     fillX(RX, c => 1 + CFG.extraRepeatBoost * cnt(c));
     if (out.length < XOFFER) fillX([...TPX.B, ...TPX.A, ...TPX.S], w);   // pool aleatorio demasiado chico
   } else {
-    const d = deck.length, cur = kc(), tier = SCHED[d], tn = themeCount();
+    const sd = phase === 'side', d = sd ? side.length : deck.length, cur = kc(), tier = (sd ? SSCHED : SCHED)[d], tn = themeCount();
     const av = c => cnt(c) < c.mx;                       // respeta la banlist (copias máximas)
     if (tier) {                                          // evento de tier en este pick
       let pool = TP[tier].filter(av);
@@ -200,15 +221,14 @@ function newOffer() {
       while (out.length < OFFER) {
         let pool = src.filter(c => av(c) && !out.includes(c));
         if (!pool.length) break;
-        pool = rested(pool, d, CFG.repeat.cooldown);     // evita lo ofrecido hace poco
-        out.push(wpick(pool, c => balW(c.k, cur, d) * decl(c) * echoW(c, tn)));
+        pool = rested(pool, at, CFG.repeat.cooldown);    // evita lo ofrecido hace poco
+        out.push(wpick(pool, c => (sd ? 1 : balW(c.k, cur, d)) * decl(c) * echoW(c, tn)));
       }
     };
     fill(R);
     if (out.length < OFFER) fill([...TP.B, ...TP.A, ...TP.S]);   // pool aleatorio demasiado chico
   }
-  const idx = phase === 'extra' ? ext.length : deck.length;
-  out.forEach(c => { LAST[c.id] = idx; });            // recordar cuándo se ofreció
+  out.forEach(c => { LAST[c.id] = at; });             // recordar cuándo se ofreció
   offer = shuffle(out).map(c => ({ c }));
 }
 
@@ -216,14 +236,19 @@ function newOffer() {
 /* ---------- 5. ELEGIR, EXPORTAR, DIBUJAR ---------- */
 function choose(c) {
   offer.forEach(o => { if (o.c !== c) DECL[o.c.id] = (DECL[o.c.id] || 0) + 1; });   // las no elegidas cuentan como rechazadas
-  if (phase === 'main') { deck.push(c); if (deck.length >= SIZE) phase = 'extra'; }
-  else { ext.push(c); if (ext.length >= XSIZE) phase = 'done'; }
-  if (phase !== 'done') { newOffer(); if (!offer.length) phase = 'done'; }
+  if (phase === 'main') { deck.push(c); if (deck.length >= SIZE) phase = next(phase); }
+  else if (phase === 'extra') { ext.push(c); if (ext.length >= XSIZE) phase = next(phase); }
+  else { side.push(c); if (side.length >= SSIZE) phase = next(phase); }
+  advance();
   render();
+}
+const next = p => p === 'main' ? 'extra' : p === 'extra' && SIDE ? 'side' : 'done';   // orden de las fases
+function advance() {   // genera la próxima oferta; si una fase se queda sin cartas para ofrecer, pasa a la siguiente
+  while (phase !== 'done') { newOffer(); if (offer.length) return; phase = next(phase); }
 }
 function ydk() {
   const id = a => a.map(c => c.id).sort((p, q) => p - q).join('\n');
-  return '#created by Arena GOAT\n#main\n' + id(deck) + '\n#extra\n' + id(ext) + '\n!side\n';
+  return '#created by Arena GOAT\n#main\n' + id(deck) + '\n#extra\n' + id(ext) + '\n!side\n' + (side.length ? id(side) + '\n' : '');
 }
 const tl = c => 'ABS'.includes(c.t) && c.t ? '<span class="tl t' + c.t + '">' + c.t + '</span>' : '';   // mini-etiqueta de tier
 // Color del marco de la carta (como en el juego): normal amarillo, efecto naranja, ritual azul,
@@ -274,24 +299,27 @@ const thTag = (g, n) => '<span class="th"' + (THEMES[g] && THEMES[g].color ? ' s
   thName(g) + (n ? ' <b>' + n + '</b>' : '') + '</span>';   // recuadro de tema con su color
 
 function render() {
-  const d = deck.length, e = ext.length, done = phase === 'done', cur = kc();
-  $('bar').style.width = ((d + e) / (SIZE + XSIZE) * 100) + '%';
-  $('n').textContent = d; $('ne').textContent = e;
+  const d = deck.length, e = ext.length, sl = side.length, done = phase === 'done', cur = kc();
+  $('bar').style.width = ((d + e + sl) / (SIZE + XSIZE + (SIDE ? SSIZE : 0)) * 100) + '%';
+  $('n').textContent = d; $('ne').textContent = e; $('nsd').textContent = sl; $('sdh').hidden = !SIDE;
   $('off').style.display = done ? 'none' : '';
   $('end').style.display = done ? '' : 'none';
-  $('sk').style.display = phase === 'extra' ? '' : 'none';
+  $('sk').style.display = phase === 'extra' || phase === 'side' ? '' : 'none';
+  $('sk').textContent = phase === 'side' ? T.finishSide : T.finishExtra;
   $('hd').textContent = done ? T.done
     : phase === 'main' ? T.pick(d + 1, SIZE) + ' · ' + T.monsters + ' ' + cur.m + ' · ' + T.spells + ' ' + cur.s + ' · ' + T.traps + ' ' + cur.t
-    : T.extraPick(e + 1, XSIZE);
+    : phase === 'extra' ? T.extraPick(e + 1, XSIZE) : T.sidePick(sl + 1, SSIZE);
 
   $('off').innerHTML = '';
+  const tnow = themeCount();
+  const showTh = g => CFG.echo.show === 'deck' ? (tnow[g] || 0) >= CFG.echo.showMin : !!CFG.echo.show;
   if (!done) offer.forEach(o => {
     const c = o.c, b = document.createElement('button'), isT = 'SAB'.includes(c.t) && c.t;
     b.className = 'card' + (isT ? ' t' + c.t : '');
     b.innerHTML = img(c) + '<b>' + c.n + '</b><span class="tag">' +
       (isT ? '<span class="tier">' + T.tier + ' ' + c.t + '</span> ' : '') +
       (c.mx === 1 ? T.limited + ' ' : c.mx === 2 ? T.semi + ' ' : '') +
-      (CFG.echo.show && c.g ? c.g.map(g => thTag(g)).join('') : '') +
+      (c.g ? c.g.filter(showTh).map(g => thTag(g)).join('') : '') +
       '&nbsp;</span><small class="d">' + (c.desc || '').replace(/</g, '&lt;') + '</small>';
     b.onclick = () => choose(c);
     $('off').appendChild(b);
@@ -300,9 +328,10 @@ function render() {
   let h = '';
   ['m', 's', 't'].forEach(k => { const a = deck.filter(c => c.k === k); if (a.length) h += list(a, kn(k) + ' (' + a.length + ')'); });
   if (e) h += list(ext, 'Extra Deck (' + e + ')');
-  if (CFG.echo.show) {                                   // temas con 2+ cartas en el main
-    const tn = themeCount(), ts = Object.keys(tn).filter(g => tn[g] >= 2).sort((a, b) => tn[b] - tn[a]);
-    if (ts.length) h = '<div class="ths" title="' + T.themes + '">' + ts.map(g => thTag(g, tn[g])).join('') + '</div>' + h;
+  if (sl) h += list(side, 'Side Deck (' + sl + ')');
+  if (CFG.echo.show) {                                   // temas con showMin+ cartas en el main
+    const ts = Object.keys(tnow).filter(g => tnow[g] >= CFG.echo.showMin).sort((a, b) => tnow[b] - tnow[a]);
+    if (ts.length) h = '<div class="ths" title="' + T.themes + '">' + ts.map(g => thTag(g, tnow[g])).join('') + '</div>' + h;
   }
   $('dl').innerHTML = h;
   $('cv').innerHTML = curve(); $('cv').title = T.curve;
@@ -335,7 +364,54 @@ $('dl').onpointerover = e => {
 $('dl').onpointermove = e => { if (pv.style.display === 'block') placePv(e); };
 $('dl').onpointerleave = () => { pv.style.display = 'none'; };
 
-function start() { SHOWN = new Set(); LAST = {}; DECL = {}; deck = []; ext = []; phase = 'main'; makeSchedule(); newOffer(); render(); }
+function start() { SHOWN = new Set(); LAST = {}; DECL = {}; deck = []; ext = []; side = []; phase = 'main'; makeSchedule(); advance(); render(); }
+
+// Ventana de confirmación propia (no usa confirm() del navegador). Esc o click afuera = cancelar.
+function confirmBox(onYes, onNo) {
+  const m = $('md');
+  const close = ok => { m.hidden = true; document.removeEventListener('keydown', key); (ok ? onYes : onNo)(); };
+  const key = e => { if (e.key === 'Escape') close(false); };
+  $('mdy').onclick = () => close(true);
+  $('mdn').onclick = () => close(false);
+  m.onclick = e => { if (e.target === m) close(false); };
+  document.addEventListener('keydown', key);
+  m.hidden = false; $('mdn').focus();
+}
+// Opción "Jugar con Side Deck": si ya hay picks hechos, pide confirmación porque reinicia el draft (start)
+$('sd').onchange = () => {
+  const want = $('sd').checked, apply = () => { $('sd').checked = SIDE = want; start(); };
+  if (status !== 'ok' || !pickNo()) return apply();
+  $('sd').checked = !want;                              // queda como estaba hasta que se confirme
+  confirmBox(apply, () => {});
+};
+
+// ---- Vista de tiers: grilla con las cartas de S, A y B (main y Extra) para revisar los .ydk de tier.
+// Se abre con el botón de la cabecera o con #tiers en la URL; el draft en curso no se toca.
+const esc = t => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+function renderTiers() {
+  const sorted = a => [...a].sort((x, y) => 'mst'.indexOf(x.k) - 'mst'.indexOf(y.k) || x.n.localeCompare(y.n));
+  const tile = c => '<a class="tv-c f-' + frame(c) + '" href="images_hd/' + c.img + '.jpg" target="_blank" rel="noopener" title="' + esc(c.n) + '">' +
+    img(c) + '<span class="tv-n">' + c.n + '</span>' +
+    (c.mx === 1 ? '<span class="tv-l">' + T.limited + '</span>' : c.mx === 2 ? '<span class="tv-l">' + T.semi + '</span>' : '') +
+    (c.g ? '<span class="tv-th">' + c.g.map(g => thTag(g)).join('') + '</span>' : '') + '</a>';
+  let h = '<p class="sub">' + T.tiersHelp + '</p>';
+  for (const t of ['S', 'A', 'B']) {
+    h += '<section class="tv-t t' + t + '"><h2><span class="tier">' + T.tier + ' ' + t + '</span> <small>' +
+      T.main + ' ' + TP[t].length + ' · Extra ' + TPX[t].length + '</small></h2>';
+    for (const [lbl, arr] of [[T.main, TP[t]], ['Extra Deck', TPX[t]]])
+      if (arr.length) h += '<div class="h">' + lbl + '</div><div class="tv-g">' + sorted(arr).map(tile).join('') + '</div>';
+    h += '</section>';
+  }
+  $('tv').innerHTML = h;
+}
+function showTiers() {
+  const on = location.hash === '#tiers';
+  $('draft').hidden = on; $('tv').hidden = !on;
+  $('tvb').textContent = on ? T.backToDraft : T.viewTiers;
+  if (on && status === 'ok') renderTiers();
+}
+$('tvb').onclick = () => { location.hash = location.hash === '#tiers' ? '' : 'tiers'; };
+window.addEventListener('hashchange', showTiers);
 
 // Idioma
 function applyStatic() {
@@ -348,11 +424,12 @@ function setLang(l) {
   applyStatic();
   document.querySelectorAll('.lang button').forEach(b => b.classList.toggle('on', b.dataset.lang === l));
   if (status === 'ok') render(); else if (status === 'error') $('hd').textContent = T.loadError;
+  if ($('tvb') && typeof showTiers === 'function') showTiers();
 }
 document.querySelectorAll('.lang button').forEach(b => b.onclick = () => setLang(b.dataset.lang));
 setLang('en');
 $('rs').onclick = start;
-$('sk').onclick = () => { phase = 'done'; render(); };
+$('sk').onclick = () => { phase = next(phase); advance(); render(); };
 
 
 /* ---------- 6. ARRANQUE ----------
@@ -363,6 +440,7 @@ Promise.all([
 ]).then(([j, cfg]) => {
   for (const t of ['S', 'A', 'B']) if (cfg.tiers && cfg.tiers[t]) CFG.tiers[t] = cfg.tiers[t];
   for (const t of ['S', 'A', 'B']) if (cfg.extraTiers && cfg.extraTiers[t]) CFG.extraTiers[t] = cfg.extraTiers[t];
+  for (const t of ['S', 'A', 'B']) if (cfg.sideTiers && cfg.sideTiers[t]) CFG.sideTiers[t] = cfg.sideTiers[t];
   Object.assign(CFG.balance, cfg.balance || {});
   Object.assign(CFG.repeat, cfg.repeat || {});
   Object.assign(CFG.echo, cfg.echo || {});
@@ -373,6 +451,8 @@ Promise.all([
   for (const t of ['S', 'A', 'B']) TP[t] = all.filter(c => !c.ex && c.t === t);
   RX = all.filter(c => c.ex && c.t === 'R');
   for (const t of ['S', 'A', 'B']) TPX[t] = all.filter(c => c.ex && c.t === t);
+  SIDE = $('sd').checked = false;   // por defecto sin side
   start();
   status = 'ok';
+  showTiers();
 }).catch(() => { status = 'error'; $('hd').textContent = T.loadError; });

@@ -55,7 +55,8 @@
     "Marauding Captain", "Reinforcement of the Army", "The Warrior Returning Alive", "Exiled Force", "Blade Knight",
     "Big Shield Gardna", "Mystic Swordsman LV2", "Mataza the Zapper", "Strike Ninja", "Ninja Grandmaster Sasuke",
     "Gearfried the Iron Knight", "Armed Samurai - Ben Kei", "Backup Soldier", "D.D. Assailant", "D.D. Survivor",
-    "Don Zaloog", "Sasuke Samurai #4", "The Little Swordsman of Aile", "Swift Gaia the Fierce Knight", "Trap Master",
+    "Don Zaloog", "Sasuke Samurai #4", "The Little Swordsman of Aile", "Swift Gaia the Fierce Knight", "Mystic Swordsman LV4", "Mystic Swordsman LV6",
+    "Silent Swordsman LV3", "Silent Swordsman LV5", "Silent Swordsman LV7", "Trap Master",
     "Elemental HERO Avian", "Elemental HERO Burstinatrix", "Elemental HERO Clayman", "Elemental HERO Sparkman"
   ]},
   "beast": { "es": "Bestias (Rescue Cat)", "en": "Beasts (Rescue Cat)", "color": "#8b6b3e", "cards": [
@@ -76,5 +77,13 @@
   "hero": { "es": "Héroes Elementales", "en": "Elemental HEROes", "color": "#d4a017", "cards": [
     "Elemental HERO Avian", "Elemental HERO Burstinatrix", "Elemental HERO Clayman", "Elemental HERO Sparkman", "Elemental HERO Flame Wingman",
     "Elemental HERO Thunder Giant", "Polymerization", "Hero Signal"
+  ]},
+  "lv": { "es": "Monstruos LV", "en": "LV Monsters", "color": "#0fb5d6", "cards": [
+    "Armed Dragon LV3", "Armed Dragon LV5", "Armed Dragon LV7", "Horus the Black Flame Dragon LV4",
+    "Horus the Black Flame Dragon LV6", "Horus the Black Flame Dragon LV8", "Mystic Swordsman LV2", "Mystic Swordsman LV4",
+    "Mystic Swordsman LV6", "Silent Swordsman LV3", "Silent Swordsman LV5", "Silent Swordsman LV7",
+    "Silent Magician LV4", "Silent Magician LV8", "Ultimate Insect LV1", "Ultimate Insect LV3",
+    "Ultimate Insect LV5", "Ultimate Insect LV7", "Dark Mimic LV1", "Dark Mimic LV3",
+    "Level Up!", "The Graveyard in the Fourth Dimension"
   ]}
 }
